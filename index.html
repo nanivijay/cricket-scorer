@@ -689,10 +689,7 @@
     <div class="result-line" id="out-result" aria-live="polite"></div>
     <p class="toss-note" id="out-toss" hidden></p>
     <div id="out-innings-summaries"></div>
-    <div class="actions" style="margin-top:16px">
-      <button id="btn-share-result">Share scorecard</button>
-      <button class="primary" id="btn-new-match">New match</button>
-    </div>
+    <button class="primary" id="btn-new-match" style="width:100%;margin-top:16px">New match</button>
   </section>
 
 </div>
@@ -1463,10 +1460,9 @@ function matchSummary(m) {
 }
 
 /**
- * The link means two different things depending on where the match is, so the
- * dialog says which. Mid-match it is a handover: someone else takes over
- * scoring from this ball on. Once the match is over there is nothing to hand
- * over, so it is simply the finished scorecard.
+ * Only ever reachable mid-match, because a handover is the only thing this
+ * link is for. Once the match is over there is nothing to hand over, so the
+ * result screen offers neither this nor a scorecard to share.
  */
 /** The link behind the QR. Deliberately not shown as text. */
 let currentShareUrl = '';
@@ -1482,28 +1478,21 @@ ${error.message}`);
     return;
   }
 
-  const finished = result(match) !== null;
   currentShareUrl = url;
-
   $('share-summary').textContent = matchSummary(match);
-  $('share-heading').textContent = finished ? 'Share scorecard' : 'Change scorer';
 
   const drawn = renderShareQr(url);
 
-  $('share-caveat').textContent = !drawn
-    ? ''
-    : finished
-      ? 'Point a camera at the code to open this scorecard. Everything travels inside '
-        + 'the code itself, so nothing is uploaded anywhere.'
-      : 'Have the next scorer point their camera at this. They pick up from exactly '
-        + 'this ball — then stop scoring on this device, as the two copies do not sync.';
+  $('share-caveat').textContent = drawn
+    ? 'Have the next scorer point their camera at this. They pick up from exactly '
+      + 'this ball — then stop scoring on this device, as the two copies do not sync.'
+    : '';
 
-  // A finished card is often wanted remotely, so it can still be sent as a link.
-  // A live handover deliberately cannot: the code is meant to be scanned in
-  // person, which is the point of not putting the link on screen. The exception
-  // is a code too dense to scan comfortably off a phone, where refusing to offer
-  // any alternative would just leave the scorer stuck.
-  $('share-actions').hidden = !(finished || !drawn || drawn.version > DENSE_QR_VERSION);
+  // The code is meant to be scanned in person; that is the point of never
+  // putting the link on screen. The exception is a code too dense to scan
+  // comfortably off a phone, where offering no alternative would just leave the
+  // scorer stuck.
+  $('share-actions').hidden = Boolean(drawn) && drawn.version <= DENSE_QR_VERSION;
   $('btn-share-copy').textContent = 'Copy link';
   $('btn-share-send').hidden = typeof navigator.share !== 'function';
 
@@ -1536,7 +1525,6 @@ function renderShareQr(url) {
 }
 
 $('btn-share').addEventListener('click', openShare);
-$('btn-share-result').addEventListener('click', openShare);
 $('btn-share-close').addEventListener('click', () => shareDialog.close());
 
 $('btn-share-copy').addEventListener('click', async () => {
@@ -1552,7 +1540,7 @@ $('btn-share-copy').addEventListener('click', async () => {
 $('btn-share-send').addEventListener('click', async () => {
   try {
     await navigator.share({
-      title: result(match) === null ? 'Take over scoring' : 'Cricket scorecard',
+      title: 'Take over scoring',
       text: matchSummary(match),
       url: currentShareUrl,
     });
@@ -1659,7 +1647,7 @@ function render() {
   $('screen-scoring').hidden = screen !== 'scoring';
   $('screen-result').hidden = screen !== 'result';
   $('btn-settings').hidden = screen !== 'scoring';
-  $('btn-share').hidden = screen === 'setup';
+  $('btn-share').hidden = screen !== 'scoring';
   renderImportBanner();
 
   if (screen === 'setup') renderSetup();

@@ -33,10 +33,9 @@ blocking flaws:
 - **Change scorer.** Tap **Change scorer** mid-match and the whole match is packed into a
   **QR code** — the next scorer points a camera at it and picks up from exactly that ball.
   The link is never shown as text, so it cannot be copied out of a screenshot or forwarded
-  by accident; a handover happens in person, on purpose. Once the match is finished the
-  same button becomes **Share scorecard**, which does offer the link, since a finished card
-  is usually wanted remotely. The payload rides in the URL fragment, which browsers never
-  transmit, so nothing is uploaded anywhere.
+  by accident; a handover happens in person, on purpose. The payload rides in the URL
+  fragment, which browsers never transmit, so nothing is uploaded anywhere. Once the match
+  is over the button disappears: there is nothing left to hand over.
 - **Over-by-over scorebook** with the live over highlighted and per-over run totals.
 - **Undo anything**, including back across an over boundary, an innings boundary, or an
   innings you ended by hand.
@@ -140,6 +139,9 @@ current config. Three things fall out of that for free:
 tested in Node.
 
 ## Handing over, and what it is not
+
+Handing over is a mid-match action only. The result screen offers just **New match** —
+once the last ball is bowled there is no scoring left to pass on.
 
 A handover link is a **snapshot**, not a live session. Whoever takes it on continues on
 their own copy, and the two diverge from that moment — balls you score afterwards do not
