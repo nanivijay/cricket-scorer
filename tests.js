@@ -169,6 +169,74 @@ test('a run out on a no-ball still credits the runs completed', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Boundaries off the bat, and what the bowling side gave away
+ * ------------------------------------------------------------------ */
+
+test('fours and sixes off the bat are counted', () => {
+  const s = live(play(match(), bat(4), bat(6), bat(4), bat(2), bat(6), bat(1)));
+  eq([s.fours, s.sixes], [2, 2], 'fours and sixes');
+  eq(s.boundaryRuns, 2 * 4 + 2 * 6, 'runs in boundaries');
+});
+
+test('a boundary off a no-ball still counts to the batter', () => {
+  const s = live(play(match(), { type: 'noball', batRuns: 6 }, { type: 'noball', batRuns: 4 }));
+  eq([s.fours, s.sixes], [1, 1], 'fours and sixes');
+});
+
+test('a wide to the rope is not a four — nobody hit it', () => {
+  const s = live(play(match(), { type: 'wide', extraRuns: 4 }));
+  eq([s.fours, s.sixes], [0, 0], 'fours and sixes');
+  eq(s.runs, 5, 'runs');
+});
+
+test('byes and leg byes to the rope are not boundaries either', () => {
+  const s = live(play(
+    match(),
+    { type: 'legal', extraRuns: 4, extraKind: 'bye' },
+    { type: 'legal', extraRuns: 4, extraKind: 'legbye' },
+  ));
+  eq([s.fours, s.sixes], [0, 0], 'fours and sixes');
+  eq(s.runs, 8, 'runs');
+});
+
+test('extras are split the way a scorecard splits them', () => {
+  const s = live(play(
+    match(),
+    { type: 'wide' },
+    { type: 'wide', extraRuns: 4 },
+    { type: 'noball', batRuns: 6 },
+    { type: 'noball', extraRuns: 2, extraKind: 'bye' },
+    { type: 'legal', extraRuns: 3, extraKind: 'bye' },
+    { type: 'legal', extraRuns: 1, extraKind: 'legbye' },
+  ));
+  eq(s.conceded, { wides: 6, noBalls: 4, byes: 3, legByes: 1 }, 'breakdown');
+});
+
+test('the breakdown always adds up to the extras total', () => {
+  const m = play(
+    match(),
+    bat(4), bat(6), dot,
+    { type: 'wide' },
+    { type: 'wide', extraRuns: 2 },
+    { type: 'noball' },
+    { type: 'noball', batRuns: 4 },
+    { type: 'noball', extraRuns: 1, extraKind: 'bye' },
+    { type: 'legal', extraRuns: 2, extraKind: 'bye' },
+    { type: 'legal', extraRuns: 4, extraKind: 'legbye' },
+    { type: 'legal', wicket: true },
+  );
+  const s = live(m);
+  const { wides, noBalls, byes, legByes } = s.conceded;
+  eq(wides + noBalls + byes + legByes, s.extras, 'breakdown total');
+});
+
+test('a match with nothing bowled has nothing to report', () => {
+  const s = live(match());
+  eq([s.fours, s.sixes, s.boundaryRuns], [0, 0, 0], 'boundaries');
+  eq(s.conceded, { wides: 0, noBalls: 0, byes: 0, legByes: 0 }, 'breakdown');
+});
+
+/* ------------------------------------------------------------------ *
  * Overs
  * ------------------------------------------------------------------ */
 

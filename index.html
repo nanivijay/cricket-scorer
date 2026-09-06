@@ -330,9 +330,38 @@
     padding-top: 10px;
   }
 
-  .meta div { text-align: center; }
-  .meta .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .meta > div { text-align: center; }
+  .meta .k, .sides .k {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
   .meta .v { font-size: 1.05rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+  /* What the batters did, and what the bowling side gave away — attributed,
+     because a wide to the rope is the bowler's fault, not a boundary. */
+  .sides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .sides > div { min-width: 0; }
+  .sides .v {
+    font-size: 0.95rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    margin-top: 1px;
+  }
+  .sides .sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    margin-top: 1px;
+  }
 
   .chase {
     background: var(--accent);
@@ -505,16 +534,25 @@
   }
 
   .innings-summary {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
     padding: 9px 0;
     border-top: 1px solid var(--border);
     font-variant-numeric: tabular-nums;
   }
 
+  .innings-summary .line {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
   .innings-summary .t { font-weight: 650; }
   .innings-summary .s { color: var(--muted); }
+
+  .innings-summary .detail {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
 
   /* ---------------- Dialog ---------------- */
 
@@ -631,8 +669,19 @@
       </div>
       <div class="meta">
         <div><div class="k">Run rate</div><div class="v" id="out-rr">0.00</div></div>
-        <div><div class="k">Extras</div><div class="v" id="out-extras">0</div></div>
         <div><div class="k">Balls left</div><div class="v" id="out-balls">120</div></div>
+      </div>
+      <div class="sides">
+        <div>
+          <div class="k">Batting</div>
+          <div class="v" id="out-boundaries">0 fours · 0 sixes</div>
+          <div class="sub" id="out-boundary-runs">nothing to the rope yet</div>
+        </div>
+        <div>
+          <div class="k">Bowling</div>
+          <div class="v" id="out-extras">0 extras</div>
+          <div class="sub" id="out-extras-split">none given away</div>
+        </div>
       </div>
     </div>
 
@@ -834,6 +883,27 @@ function ballChip(delivery) {
 }
 
 const overRuns = (deliveries) => deliveries.reduce((total, d) => total + deliveryRuns(d), 0);
+
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+
+/** "6 fours · 2 sixes" — what came off the bat. */
+const boundaryText = (summary) =>
+  `${plural(summary.fours, 'four', 'fours')} · ${plural(summary.sixes, 'six', 'sixes')}`;
+
+/**
+ * "4wd · 2nb · 3b" — the way a scorecard writes extras, omitting the zeroes.
+ * Wides are "wd" rather than the conventional "w": this app puts a bare W on a
+ * wicket in the over strip, and one letter meaning two things is asking for a
+ * misread.
+ */
+function extrasSplit({ wides, noBalls, byes, legByes }) {
+  const parts = [];
+  if (wides) parts.push(`${wides}wd`);
+  if (noBalls) parts.push(`${noBalls}nb`);
+  if (byes) parts.push(`${byes}b`);
+  if (legByes) parts.push(`${legByes}lb`);
+  return parts.join(' · ');
+}
 
 /* ------------------------------------------------------------------ *
  * Setup screen
@@ -1244,8 +1314,15 @@ function renderScoring() {
   $('out-overs').textContent =
     `${summary.oversText} / ${config.oversPerInnings} overs · ${summary.maxWickets - summary.wickets} wickets left`;
   $('out-rr').textContent = summary.runRate.toFixed(2);
-  $('out-extras').textContent = String(summary.extras);
   $('out-balls').textContent = String(summary.ballsLeft);
+
+  $('out-boundaries').textContent = boundaryText(summary);
+  $('out-boundary-runs').textContent = summary.boundaryRuns > 0
+    ? `${summary.boundaryRuns} runs to the rope`
+    : 'nothing to the rope yet';
+
+  $('out-extras').textContent = plural(summary.extras, 'extra', 'extras');
+  $('out-extras-split').textContent = extrasSplit(summary.conceded) || 'none given away';
 
   renderChase();
   renderBook(summary);
@@ -1343,8 +1420,6 @@ function renderResult() {
 
   $('out-innings-summaries').replaceChildren(...match.innings.map((_, index) => {
     const summary = summarizeInnings(match, index);
-    const row = document.createElement('div');
-    row.className = 'innings-summary';
 
     const team = document.createElement('span');
     team.className = 't';
@@ -1354,7 +1429,21 @@ function renderResult() {
     score.className = 's';
     score.textContent = `${summary.runs}/${summary.wickets} (${summary.oversText} ov)`;
 
-    row.append(team, score);
+    const line = document.createElement('div');
+    line.className = 'line';
+    line.append(team, score);
+
+    const split = extrasSplit(summary.conceded);
+    const detail = document.createElement('div');
+    detail.className = 'detail';
+    detail.textContent = [
+      boundaryText(summary),
+      plural(summary.extras, 'extra', 'extras') + (split ? ` (${split})` : ''),
+    ].join(' · ');
+
+    const row = document.createElement('div');
+    row.className = 'innings-summary';
+    row.append(line, detail);
     return row;
   }));
 }

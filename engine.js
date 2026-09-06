@@ -154,11 +154,34 @@ export function summarize(innings, config, target = null) {
   let wickets = 0;
   let legalBalls = 0;
 
+  // What the batters did, and what the bowling side gave away. Boundaries are
+  // counted off the bat only: a wide to the rope is four extras, not a four,
+  // and byes that reach the rope were never hit.
+  let fours = 0;
+  let sixes = 0;
+  const conceded = { wides: 0, noBalls: 0, byes: 0, legByes: 0 };
+
   for (const delivery of innings.deliveries) {
     runs += deliveryRuns(delivery);
     extras += deliveryExtras(delivery);
     if (delivery.wicket) wickets += 1;
     if (isLegalDelivery(delivery)) legalBalls += 1;
+
+    if (delivery.batRuns === 4) fours += 1;
+    if (delivery.batRuns === 6) sixes += 1;
+
+    // The four buckets are built to add up to `extras` exactly, so the
+    // breakdown can never disagree with the total shown beside it.
+    if (delivery.type === 'wide') {
+      conceded.wides += 1 + delivery.extraRuns;
+    } else if (delivery.type === 'noball') {
+      conceded.noBalls += 1 + delivery.extraRuns;
+    } else if (delivery.extraKind === 'legbye') {
+      conceded.legByes += delivery.extraRuns;
+    } else {
+      // Byes, and anything else off a legal delivery that did not come off the bat.
+      conceded.byes += delivery.extraRuns;
+    }
   }
 
   const maxWickets = wicketsAllowed(config);
@@ -174,6 +197,10 @@ export function summarize(innings, config, target = null) {
   return {
     runs,
     extras,
+    conceded,
+    fours,
+    sixes,
+    boundaryRuns: fours * 4 + sixes * 6,
     wickets,
     maxWickets,
     legalBalls,
