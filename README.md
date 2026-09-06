@@ -31,9 +31,11 @@ blocking flaws:
 - **Two innings with a chase.** Target, "need N from M balls", required run rate, and a
   proper result — by runs, by wickets with balls to spare, or tied.
 - **Change scorer.** Tap **Change scorer** mid-match and the whole match is packed into a
-  link — a full 20-over match is about 800 characters. Send it to whoever is taking over;
-  they pick up from exactly that ball. Once the match is finished the same button becomes
-  **Share scorecard**. The payload rides in the URL fragment, which browsers never
+  **QR code** — the next scorer points a camera at it and picks up from exactly that ball.
+  The link is never shown as text, so it cannot be copied out of a screenshot or forwarded
+  by accident; a handover happens in person, on purpose. Once the match is finished the
+  same button becomes **Share scorecard**, which does offer the link, since a finished card
+  is usually wanted remotely. The payload rides in the URL fragment, which browsers never
   transmit, so nothing is uploaded anywhere.
 - **Over-by-over scorebook** with the live over highlighted and per-over run totals.
 - **Undo anything**, including back across an over boundary, an innings boundary, or an
@@ -61,6 +63,15 @@ that run two ways:
 node tests.js            # scoring laws
 node share.tests.js      # share-link encoding
 # or open http://localhost:8080/tests.html for both
+```
+
+The QR encoder is verified against a reference implementation rather than by eye —
+every module of every matrix, across QR versions 1-32 and all eight mask patterns:
+
+```sh
+python -m venv .qrvenv
+.qrvenv/Scripts/python -m pip install qrcode
+.qrvenv/Scripts/python tools/qr-verify.py
 ```
 
 They pin down every row of the table below, plus over rollover, undo across boundaries,
@@ -100,6 +111,7 @@ happily as from a user root.
 index.html            the whole app — markup, styles, and UI wiring
 engine.js             pure scoring functions; no DOM, no dependencies
 share.js              packs a match into a URL fragment, and back
+qr.js                 QR encoder: byte mode, level L, versions 1-40
 tests.js              scoring-law assertions (node tests.js)
 share.tests.js        share-link round-trip assertions (node share.tests.js)
 tests.html            both suites, in a browser
@@ -109,6 +121,7 @@ icon.svg              source icon
 icon-192.png          raster icons, generated from tools/make-icons.js
 icon-512.png
 tools/make-icons.js   one-off icon generator — not part of any build
+tools/qr-verify.py    checks every QR module against a reference encoder
 package.json          only `{"type": "module"}`, so `node tests.js` works
 ```
 

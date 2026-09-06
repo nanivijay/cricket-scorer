@@ -131,10 +131,28 @@
   .topbar-actions { display: flex; align-items: center; gap: 8px; }
   .topbar-actions button { min-height: 40px; padding: 8px 14px; font-size: 0.88rem; }
 
-  /* The link is long; let it scroll rather than stretch the dialog. */
-  #share-link {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.78rem;
+  /* The QR is the whole point of the handover, so give it room and a white
+     ground — scanners want maximum contrast regardless of the page theme. */
+  .qr-frame {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 4px auto 12px;
+    width: min(300px, 100%);
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+  }
+
+  .qr-frame svg { width: 100%; height: 100%; display: block; }
+
+  .qr-problem {
+    background: none;
+    padding: 0;
+    color: var(--extra);
+    font-size: 0.85rem;
+    text-align: center;
+    aspect-ratio: auto;
   }
 
   .card {
@@ -721,23 +739,20 @@
   <h2 id="share-heading">Change scorer</h2>
   <p class="hint" id="share-summary" style="margin-top:-8px"></p>
 
-  <label class="field">
-    <span class="label">Link</span>
-    <input type="text" id="share-link" readonly spellcheck="false">
-  </label>
+  <div class="qr-frame" id="share-qr"></div>
+  <p class="hint" id="share-caveat"></p>
 
-  <div class="actions">
+  <div class="actions" id="share-actions" hidden>
     <button class="primary" id="btn-share-copy">Copy link</button>
     <button id="btn-share-send" hidden>Share&hellip;</button>
   </div>
-
-  <p class="hint" id="share-caveat"></p>
 
   <button id="btn-share-close" style="width:100%;margin-top:14px">Close</button>
 </dialog>
 
 <script type="module">
 import { decodeMatch, payloadFromHash, shareUrl } from './share.js';
+import { encodeQr, toSvg } from './qr.js';
 import {
   BALLS_PER_OVER,
   applyDelivery,
@@ -1452,6 +1467,9 @@ function matchSummary(m) {
  * scoring from this ball on. Once the match is over there is nothing to hand
  * over, so it is simply the finished scorecard.
  */
+/** The link behind the QR. Deliberately not shown as text. */
+let currentShareUrl = '';
+
 function openShare() {
   let url;
   try {
@@ -1464,20 +1482,56 @@ ${error.message}`);
   }
 
   const finished = result(match) !== null;
+  currentShareUrl = url;
 
-  $('share-link').value = url;
   $('share-summary').textContent = matchSummary(match);
-  $('btn-share-copy').textContent = 'Copy link';
   $('share-heading').textContent = finished ? 'Share scorecard' : 'Change scorer';
 
-  $('share-caveat').textContent = finished
-    ? 'The whole scorecard travels inside the link itself, so nothing is uploaded anywhere.'
-    : 'Send this to whoever is taking over. They pick up from exactly this ball. '
-      + 'Once they have it, stop scoring on this device — the two copies do not sync.';
+  const drawn = renderShareQr(url);
 
+  $('share-caveat').textContent = !drawn
+    ? ''
+    : finished
+      ? 'Point a camera at the code to open this scorecard. Everything travels inside '
+        + 'the code itself, so nothing is uploaded anywhere.'
+      : 'Have the next scorer point their camera at this. They pick up from exactly '
+        + 'this ball — then stop scoring on this device, as the two copies do not sync.';
+
+  // A finished card is often wanted remotely, so it can still be sent as a link.
+  // A live handover deliberately cannot: the code is meant to be scanned in
+  // person, which is the point of not putting the link on screen. The exception
+  // is a code too dense to scan comfortably off a phone, where refusing to offer
+  // any alternative would just leave the scorer stuck.
+  $('share-actions').hidden = !(finished || !drawn || drawn.version > DENSE_QR_VERSION);
+  $('btn-share-copy').textContent = 'Copy link';
   $('btn-share-send').hidden = typeof navigator.share !== 'function';
+
   shareDialog.showModal();
-  $('btn-share-copy').focus({ preventScroll: true });
+  $('btn-share-close').focus({ preventScroll: true });
+}
+
+/**
+ * Above this version the modules get too small to scan reliably off a phone
+ * screen — a version 33 code is 149 modules across, barely two pixels each.
+ */
+const DENSE_QR_VERSION = 25;
+
+/** Draw the QR, or explain why the match will not fit in one. */
+function renderShareQr(url) {
+  const frame = $('share-qr');
+  try {
+    const qr = encodeQr(url);
+    frame.classList.remove('qr-problem');
+    frame.innerHTML = toSvg(qr);
+    frame.firstElementChild.setAttribute('aria-label', 'QR code for this match');
+    return qr;
+  } catch {
+    frame.classList.add('qr-problem');
+    frame.replaceChildren(document.createTextNode(
+      'This match is too long to fit in a QR code. Use Copy link instead.',
+    ));
+    return null;
+  }
 }
 
 $('btn-share').addEventListener('click', openShare);
@@ -1485,15 +1539,12 @@ $('btn-share-result').addEventListener('click', openShare);
 $('btn-share-close').addEventListener('click', () => shareDialog.close());
 
 $('btn-share-copy').addEventListener('click', async () => {
-  const field = $('share-link');
   try {
-    await navigator.clipboard.writeText(field.value);
+    await navigator.clipboard.writeText(currentShareUrl);
+    $('btn-share-copy').textContent = 'Copied';
   } catch {
-    // Clipboard access can be refused; selecting the text lets the user copy it.
-    field.focus();
-    field.select();
+    $('btn-share-copy').textContent = 'Copying blocked';
   }
-  $('btn-share-copy').textContent = 'Copied';
   window.setTimeout(() => { $('btn-share-copy').textContent = 'Copy link'; }, 1600);
 });
 
@@ -1502,7 +1553,7 @@ $('btn-share-send').addEventListener('click', async () => {
     await navigator.share({
       title: result(match) === null ? 'Take over scoring' : 'Cricket scorecard',
       text: matchSummary(match),
-      url: $('share-link').value,
+      url: currentShareUrl,
     });
   } catch {
     // The user dismissed the share sheet; nothing to do.

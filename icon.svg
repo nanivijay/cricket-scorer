@@ -1,9 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cricket ball">
-  <rect width="512" height="512" fill="#0f766e"/>
-  <circle cx="256" cy="256" r="155" fill="#d64545"/>
-  <circle cx="256" cy="256" r="155" fill="none" stroke="#00000022" stroke-width="10"/>
-  <g fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-dasharray="16 14">
-    <path d="M190 132 A 130 175 0 0 0 190 380"/>
-    <path d="M322 132 A 130 175 0 0 1 322 380"/>
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#0a5852"/>
+    </linearGradient>
+    <radialGradient id="leather" cx="0.36" cy="0.32" r="0.78">
+      <stop offset="0" stop-color="#e15c58"/>
+      <stop offset="1" stop-color="#c73a3a"/>
+    </radialGradient>
+    <clipPath id="ball">
+      <circle cx="256" cy="256" r="205"/>
+    </clipPath>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#ground)"/>
+  <circle cx="256" cy="256" r="205" fill="url(#leather)"/>
+
+  <!-- A single bold seam: the one detail that still reads at favicon size. -->
+  <g clip-path="url(#ball)">
+    <path d="M300 88 A 96 194 0 0 1 300 424"
+          fill="none" stroke="#fff4e8" stroke-width="17"
+          stroke-linecap="butt" stroke-dasharray="26 22"/>
   </g>
+
+  <circle cx="256" cy="256" r="205" fill="none" stroke="#802121" stroke-width="14" opacity="0.55"/>
 </svg>

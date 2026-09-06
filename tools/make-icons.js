@@ -76,36 +76,57 @@ function encodePng(size, rgba) {
 /* ------------------------------- Drawing -------------------------------- */
 
 const TEAL = [15, 118, 110];
-const LEATHER = [214, 69, 69];
-const RIM = [150, 44, 44];
-const SEAM = [255, 255, 255];
+const TEAL_DEEP = [10, 88, 82];
+const LEATHER = [199, 58, 58];
+const LEATHER_LIT = [225, 92, 88];
+const RIM = [128, 33, 33];
+const SEAM = [255, 244, 232];
+
+const mix = (a, b, t) => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+];
 
 /**
- * Colour one sample point: teal ground, red ball, dashed white seam ring.
- * Mirrors icon.svg. Full-bleed background so the icon also works as maskable.
+ * A cricket ball, lit from the top left, on a teal ground.
+ *
+ * At 32px in a browser tab there is room for exactly one idea, so the ball
+ * fills most of the frame and the seam is a single bold curve rather than the
+ * two fine dashed ones a larger rendering can afford.
  */
 function sample(x, y, size) {
-  const cx = size / 2;
-  const cy = size / 2;
+  const cx = size * 0.5;
+  const cy = size * 0.5;
   const dx = x - cx;
   const dy = y - cy;
 
-  const ballRadius = size * 0.303;
+  // Background: a soft diagonal so the tile does not read as a flat block.
+  const wash = Math.min(1, Math.max(0, (x + y) / (size * 2)));
+  const ground = mix(TEAL, TEAL_DEEP, wash);
+
+  const radius = size * 0.40;
   const distance = Math.hypot(dx, dy);
-  if (distance > ballRadius) return TEAL;
+  if (distance > radius) return ground;
 
-  // Seam: the flanks of an ellipse, stopped short of the poles so it reads as
-  // two curved seams rather than a ring, then broken into stitches.
-  const a = size * 0.135;
-  const b = size * 0.315;
+  // Leather, shaded from a highlight at the upper left to a darker lower right.
+  const light = Math.min(1, Math.max(0, 0.5 - (dx + dy) / (radius * 3.2)));
+  let colour = mix(LEATHER, LEATHER_LIT, light);
+
+  // A single seam: the right-hand flank of an ellipse, stopped short of the
+  // poles, stitched. One clear curve survives being shrunk to a favicon.
+  const a = radius * 0.46;
+  const b = radius * 0.94;
   const ellipse = Math.hypot(dx / a, dy / b);
-  const onSeamBand = Math.abs(ellipse - 1) < 0.05 && Math.abs(dy) < b * 0.8;
-  const stitchIndex = Math.floor((dy / size) * 26);
-  if (onSeamBand && stitchIndex % 2 === 0) return SEAM;
+  const onSeam = Math.abs(ellipse - 1) < 0.13 && dx > -radius * 0.1 && Math.abs(dy) < b * 0.82;
+  const stitch = Math.floor((dy / size) * 15);
+  if (onSeam && stitch % 2 === 0) return SEAM;
 
-  // A darker rim gives the ball an edge against the teal.
-  if (distance > ballRadius * 0.94) return RIM;
-  return LEATHER;
+  // Darken the edge so the ball keeps its shape against the teal.
+  if (distance > radius * 0.9) {
+    colour = mix(colour, RIM, (distance - radius * 0.9) / (radius * 0.1));
+  }
+  return colour;
 }
 
 /** Render at `size`, supersampled for smooth edges. */

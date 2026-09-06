@@ -7,13 +7,14 @@
  * Bump CACHE when the asset list changes.
  */
 
-const CACHE = 'cricket-counter-v2';
+const CACHE = 'cricket-counter-v3';
 
 const PRECACHE = [
   './',
   './index.html',
   './engine.js',
   './share.js',
+  './qr.js',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
