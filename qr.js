@@ -1,5 +1,5 @@
 /**
- * Cricket Over Counter — QR codes.
+ * Cricket Scorer — QR codes.
  *
  * A minimal QR encoder: byte mode, error correction level L, versions 1-40.
  * Enough to put a handover link on screen so the next scorer can point a phone

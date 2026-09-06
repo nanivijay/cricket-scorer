@@ -1,7 +1,11 @@
-# Cricket Over Counter
+# Cricket Scorer
 
 A fast, mobile-first, ball-by-ball cricket scorer. Open it, set the match up, and tap
 your way through the innings. No accounts, no network, no build step.
+
+It started as a replacement for an over counter, which is where the delivery-log design
+came from, but it keeps a full scorecard — score, wickets, extras, run rate, the over-by-over
+book, the chase and the result.
 
 Inspired by [sanjivd.github.io](https://sanjivd.github.io/), rebuilt to fix its two
 blocking flaws:

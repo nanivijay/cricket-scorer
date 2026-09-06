@@ -1,7 +1,7 @@
 {
-  "name": "Cricket Over Counter",
-  "short_name": "Over Counter",
-  "description": "Ball-by-ball cricket scoring with configurable overs, squad size, and extras that carry runs.",
+  "name": "Cricket Scorer",
+  "short_name": "Scorer",
+  "description": "Ball-by-ball cricket scoring: configurable overs and squad size, changeable mid-match, extras that carry runs, coin toss, chase tracking. Works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

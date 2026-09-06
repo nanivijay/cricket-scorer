@@ -1,5 +1,5 @@
 /**
- * Cricket Over Counter — shareable match links.
+ * Cricket Scorer — shareable match links.
  *
  * Packs a whole match into a compact byte string so it can ride in a URL
  * fragment. Fragments are never sent to the server, so a shared match stays

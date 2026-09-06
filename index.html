@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f766e">
-<title>Cricket Over Counter</title>
+<title>Cricket Scorer</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <!-- iOS composites a transparent touch icon onto black, so it gets the opaque one. -->
@@ -71,19 +71,11 @@
   }
 
   .topbar h1 {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     margin: 0;
-  }
-
-  .topbar .sub {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--muted);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   button {
@@ -574,7 +566,7 @@
   </div>
 
   <div class="topbar">
-    <h1><span class="sub">Cricket</span>Over Counter</h1>
+    <h1>Cricket Scorer</h1>
     <div class="topbar-actions">
       <button id="btn-share" hidden>Change scorer</button>
       <button class="icon-btn" id="btn-settings" hidden aria-label="Match settings" title="Match settings">&#9881;</button>

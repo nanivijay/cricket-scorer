@@ -1,5 +1,5 @@
 /**
- * Cricket Over Counter — scoring engine.
+ * Cricket Scorer — scoring engine.
  *
  * The entire match is an append-only log of deliveries. Every number shown in the
  * UI is derived by folding that log against the current config, so:

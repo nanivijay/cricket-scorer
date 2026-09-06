@@ -1,5 +1,5 @@
 /**
- * Offline support for the Cricket Over Counter.
+ * Offline support for Cricket Scorer.
  *
  * Two strategies, because the app's own files and its icons want opposite
  * things:
@@ -19,7 +19,7 @@
  * Bump CACHE when the asset list changes.
  */
 
-const CACHE = 'cricket-counter-v5';
+const CACHE = 'cricket-counter-v6';
 
 /**
  * How long to wait for the network before falling back to cache. Long enough
