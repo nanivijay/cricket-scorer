@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Cricket Over Counter</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --surface-2: #eceef1;
+    --border: #d3d7dd;
+    --text: #14171c;
+    --muted: #5c6470;
+    --accent: #0f766e;
+    --accent-text: #ffffff;
+    --run: #1f2937;
+    --boundary: #1d4ed8;
+    --extra: #b45309;
+    --wicket: #b91c1c;
+    --radius: 12px;
+    --tap: 56px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #9198a1;
+      --accent: #2dd4bf;
+      --accent-text: #04211d;
+      --run: #e6edf3;
+      --boundary: #60a5fa;
+      --extra: #fbbf24;
+      --wicket: #f87171;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 12px 12px calc(20px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .topbar h1 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .topbar .sub {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 10px 14px;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: default; transform: none; }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+    font-weight: 650;
+  }
+
+  .icon-btn { min-width: 44px; padding: 10px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  /* ---------------- Setup ---------------- */
+
+  .field { display: block; margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field > .label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], input[type="number"] {
+    font: inherit;
+    color: inherit;
+    width: 100%;
+    /* Inputs carry an intrinsic min-content width; without this they refuse to
+       shrink inside the two-column grid and push the card off a narrow screen. */
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 12px;
+    min-height: 46px;
+  }
+
+  input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+
+  .hint { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+  .chip {
+    min-height: 38px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    font-size: 0.9rem;
+  }
+
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+    font-weight: 650;
+  }
+
+  /* ---------------- Toss ---------------- */
+
+  .toss { display: flex; align-items: center; gap: 12px; }
+  .toss-col { flex: 1; min-width: 0; display: grid; gap: 8px; }
+  .toss-text { font-size: 0.9rem; }
+  .toss-text strong { font-weight: 700; }
+  .toss-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .coin {
+    width: 58px;
+    height: 58px;
+    flex: 0 0 58px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 750;
+    font-size: 1.25rem;
+    color: #402d05;
+    background: radial-gradient(circle at 34% 30%, #f4d276, #d8a02a 62%, #a97612);
+    border: 2px solid #8a6508;
+    box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.13);
+  }
+
+  .coin-letter {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #43300a;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .coin-blank { font-size: 1.5rem; font-weight: 800; color: #43300a; opacity: 0.4; }
+
+  .coin.is-flipping { animation: coin-flip 0.9s ease-out; }
+
+  @keyframes coin-flip {
+    0%   { transform: rotateY(0deg) translateY(0); }
+    50%  { transform: rotateY(900deg) translateY(-16px); }
+    100% { transform: rotateY(1800deg) translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .coin.is-flipping { animation: none; }
+  }
+
+  .toss-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.84rem;
+    margin: -6px 0 10px;
+  }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .split > * { min-width: 0; }
+
+  /* ---------------- Scoreboard ---------------- */
+
+  .board { display: grid; gap: 10px; }
+
+  .board-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .batting {
+    font-weight: 650;
+    font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .innings-tag {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .score {
+    font-size: clamp(2.6rem, 15vw, 3.6rem);
+    font-weight: 750;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .overs { font-size: 1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* The overs line doubles as the way into match settings — a rain-reduced
+     game needs this to be obvious, not buried behind the gear icon. */
+  .overs-edit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+    padding: 2px 0;
+    min-height: 34px;
+    text-align: left;
+  }
+
+  .overs-edit:active { transform: none; }
+
+  .edit-pill {
+    font-size: 0.72rem;
+    font-weight: 650;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 2px 9px;
+    white-space: nowrap;
+  }
+
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .meta div { text-align: center; }
+  .meta .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .meta .v { font-size: 1.05rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+  .chase {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    font-weight: 650;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chase small { display: block; font-weight: 500; opacity: 0.85; font-size: 0.78rem; }
+
+  /* ---------------- Pad ---------------- */
+
+  .pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+  .pad button {
+    min-height: var(--tap);
+    font-size: 1.3rem;
+    font-weight: 650;
+    padding: 0;
+  }
+
+  .pad .b-boundary { color: var(--boundary); }
+  .pad .b-wicket { color: var(--wicket); }
+  .pad .b-extra { color: var(--extra); font-size: 1.05rem; }
+
+  /* ---------------- Modifier sheet ---------------- */
+
+  .sheet {
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .sheet-title { font-weight: 650; font-size: 0.95rem; }
+  .sheet-title small { display: block; font-weight: 400; color: var(--muted); font-size: 0.78rem; }
+
+  .sheet-row { margin-bottom: 10px; }
+  .sheet-row:last-child { margin-bottom: 0; }
+
+  .sheet-row-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  /* One row whatever the option count, so the runs stay big thumb targets. */
+  .sheet-runs {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 8px;
+  }
+
+  .sheet-runs button {
+    min-height: 54px;
+    font-size: 1.1rem;
+    font-weight: 650;
+    padding: 0;
+  }
+
+  /* Every button in the sheet commits, so the wicket row has to look like what
+     it records — no toggle to arm first, nothing to get in the wrong order. */
+  .sheet-row.is-wicket .sheet-row-label { color: var(--wicket); }
+  .sheet-row.is-wicket .sheet-runs button {
+    color: var(--wicket);
+    border-color: var(--wicket);
+  }
+
+  .sheet-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .toggle {
+    flex: 1 1 auto;
+    min-height: 42px;
+    font-size: 0.88rem;
+    background: var(--surface-2);
+  }
+
+  .toggle[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+    font-weight: 650;
+  }
+
+  /* ---------------- Scorebook ---------------- */
+
+  .book { display: grid; gap: 2px; }
+
+  .over-row {
+    display: flex;
+    /* Overs with wides wrap onto a second line, so the label and total pin to
+       the top rather than floating in the middle of a two-line row. */
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .history .over-row + .over-row { border-top: 1px solid var(--border); }
+
+  .over-row.is-live {
+    background: var(--surface-2);
+    background: color-mix(in srgb, var(--accent) 13%, transparent);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+  }
+
+  .over-no {
+    font-size: 0.72rem;
+    color: var(--muted);
+    min-width: 46px;
+    font-weight: 600;
+    padding-top: 8px;
+  }
+
+  .over-row.is-live .over-no { color: var(--accent); }
+
+  .balls { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; min-width: 0; }
+
+  .ball {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--surface-2);
+    font-size: 0.82rem;
+    font-weight: 650;
+    color: var(--run);
+  }
+
+  .ball.is-boundary { color: var(--boundary); }
+  .ball.is-extra { color: var(--extra); }
+  .ball.is-wicket { background: var(--wicket); color: #fff; }
+
+  .over-total {
+    font-size: 0.75rem;
+    color: var(--muted);
+    min-width: 34px;
+    text-align: right;
+    padding-top: 8px;
+  }
+
+  .over-empty { color: var(--muted); font-size: 0.8rem; padding-top: 6px; }
+
+  .history { max-height: 190px; overflow-y: auto; }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions > * { min-width: 0; }
+
+  /* ---------------- Result ---------------- */
+
+  .result-line {
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 6px 0 12px;
+  }
+
+  .innings-summary {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 0;
+    border-top: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .innings-summary .t { font-weight: 650; }
+  .innings-summary .s { color: var(--muted); }
+
+  /* ---------------- Dialog ---------------- */
+
+  dialog {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 18px;
+    width: min(460px, calc(100vw - 24px));
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+  dialog h2 { margin: 0 0 14px; font-size: 1.05rem; }
+
+  .warn {
+    background: color-mix(in srgb, var(--extra) 18%, transparent);
+    border: 1px solid var(--extra);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 9px 11px;
+    font-size: 0.82rem;
+    margin-bottom: 14px;
+  }
+
+  .danger-zone { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+  .danger { color: var(--wicket); width: 100%; }
+
+  [hidden] { display: none !important; }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <h1><span class="sub">Cricket</span>Over Counter</h1>
+    <button class="icon-btn" id="btn-settings" hidden aria-label="Match settings" title="Match settings">&#9881;</button>
+  </div>
+
+  <!-- ============================ SETUP ============================ -->
+  <section id="screen-setup" class="card" aria-labelledby="setup-heading">
+    <h2 id="setup-heading" class="sr-only">New match</h2>
+
+    <div class="split">
+      <label class="field">
+        <span class="label">Team A</span>
+        <input type="text" id="in-team-a" value="Team A" autocomplete="off" enterkeyhint="next">
+      </label>
+      <label class="field">
+        <span class="label">Team B</span>
+        <input type="text" id="in-team-b" value="Team B" autocomplete="off" enterkeyhint="next">
+      </label>
+    </div>
+
+    <div class="field">
+      <label class="label" for="in-overs">Overs per innings</label>
+      <input type="number" id="in-overs" min="1" max="99" step="1" value="20" inputmode="numeric">
+    </div>
+
+    <div class="field">
+      <label class="label" for="in-players">Players per side</label>
+      <input type="number" id="in-players" min="2" max="15" step="1" value="11" inputmode="numeric">
+      <p class="hint" id="hint-wickets">All out at 10 wickets.</p>
+    </div>
+
+    <div class="field">
+      <span class="label">Toss</span>
+      <div class="toss" id="toss"></div>
+    </div>
+
+    <div class="field">
+      <span class="label">Batting first</span>
+      <div class="chips" id="chips-first"></div>
+      <p class="hint" id="hint-first"></p>
+    </div>
+
+    <button class="primary" id="btn-start" style="width:100%">Start match</button>
+  </section>
+
+  <!-- =========================== SCORING =========================== -->
+  <section id="screen-scoring" hidden>
+
+    <div class="card board" style="margin-bottom:12px">
+      <div class="board-head">
+        <span class="batting" id="out-batting">Team A</span>
+        <span class="innings-tag" id="out-innings">Innings 1</span>
+      </div>
+      <div>
+        <div class="score" id="out-score" aria-live="polite">0/0</div>
+        <button class="overs-edit" id="btn-overs-edit"
+                aria-label="Change overs or players per side">
+          <span class="overs" id="out-overs">0.0 / 20 overs</span>
+          <span class="edit-pill" aria-hidden="true">Edit</span>
+        </button>
+      </div>
+      <div class="meta">
+        <div><div class="k">Run rate</div><div class="v" id="out-rr">0.00</div></div>
+        <div><div class="k">Extras</div><div class="v" id="out-extras">0</div></div>
+        <div><div class="k">Balls left</div><div class="v" id="out-balls">120</div></div>
+      </div>
+    </div>
+
+    <div class="chase" id="out-chase" hidden></div>
+
+    <div class="sheet" id="sheet" hidden>
+      <div class="sheet-title" id="sheet-title"></div>
+      <div class="sheet-toggles" id="sheet-toggles"></div>
+      <div id="sheet-rows"></div>
+      <button id="btn-sheet-cancel">Cancel</button>
+    </div>
+
+    <div class="pad" id="pad" style="margin-top:12px">
+      <button data-runs="0" aria-label="Dot ball">0</button>
+      <button data-runs="1">1</button>
+      <button data-runs="2">2</button>
+      <button data-runs="3">3</button>
+      <button data-runs="4" class="b-boundary">4</button>
+      <button data-runs="5">5</button>
+      <button data-runs="6" class="b-boundary">6</button>
+      <button data-sheet="wicket" class="b-wicket" aria-label="Wicket">W</button>
+      <button data-sheet="wide" class="b-extra" aria-label="Wide">WD</button>
+      <button data-sheet="noball" class="b-extra" aria-label="No-ball">NB</button>
+      <button data-sheet="bye" class="b-extra" aria-label="Byes">B</button>
+      <button data-sheet="legbye" class="b-extra" aria-label="Leg byes">LB</button>
+    </div>
+
+    <div class="card book" id="book" style="margin-top:12px">
+      <div class="over-row is-live">
+        <span class="over-no" id="out-over-no">Over 1</span>
+        <span class="balls" id="out-this-over"></span>
+        <span class="over-total" id="out-over-total"></span>
+      </div>
+      <div class="history" id="out-history"></div>
+    </div>
+
+    <div class="actions" style="margin-top:12px">
+      <button id="btn-undo">&#8630; Undo</button>
+      <button id="btn-end-innings">End innings</button>
+    </div>
+  </section>
+
+  <!-- =========================== RESULT ============================ -->
+  <section id="screen-result" class="card" hidden aria-labelledby="result-heading">
+    <h2 id="result-heading" class="sr-only">Match result</h2>
+    <div class="result-line" id="out-result" aria-live="polite"></div>
+    <p class="toss-note" id="out-toss" hidden></p>
+    <div id="out-innings-summaries"></div>
+    <button class="primary" id="btn-new-match" style="width:100%;margin-top:16px">New match</button>
+  </section>
+
+</div>
+
+<!-- ======================== SETTINGS DIALOG ======================== -->
+<dialog id="dlg-settings" aria-labelledby="settings-heading">
+  <h2 id="settings-heading">Match settings</h2>
+
+  <div class="warn" id="settings-warn" hidden></div>
+
+  <div class="split">
+    <label class="field">
+      <span class="label">Team A</span>
+      <input type="text" id="cfg-team-a" autocomplete="off">
+    </label>
+    <label class="field">
+      <span class="label">Team B</span>
+      <input type="text" id="cfg-team-b" autocomplete="off">
+    </label>
+  </div>
+
+  <div class="field">
+    <label class="label" for="cfg-overs">Overs per innings</label>
+    <input type="number" id="cfg-overs" min="1" max="99" step="1" inputmode="numeric">
+    <p class="hint" id="cfg-hint-overs"></p>
+  </div>
+
+  <div class="field">
+    <label class="label" for="cfg-players">Players per side</label>
+    <input type="number" id="cfg-players" min="2" max="15" step="1" inputmode="numeric">
+    <p class="hint" id="cfg-hint-players"></p>
+  </div>
+
+  <div class="actions">
+    <button id="btn-cfg-cancel">Cancel</button>
+    <button class="primary" id="btn-cfg-apply">Apply</button>
+  </div>
+
+  <div class="danger-zone">
+    <button class="danger" id="btn-abandon">Abandon match and start over</button>
+  </div>
+</dialog>
+
+<script type="module">
+import {
+  BALLS_PER_OVER,
+  applyDelivery,
+  battingTeamFor,
+  chaseState,
+  closeInnings,
+  createMatch,
+  deliveryLabel,
+  deliveryRuns,
+  isMatchOver,
+  isLegalDelivery,
+  result,
+  summarizeInnings,
+  undo,
+  updateConfig,
+  wicketsAllowed,
+} from './engine.js';
+
+const STORAGE_KEY = 'cricket-counter-v1';
+
+const $ = (id) => document.getElementById(id);
+
+/**
+ * The match is the single source of truth; `pending` is the transient modifier
+ * sheet. The visible screen is derived, never stored, so it can't disagree with
+ * the match state.
+ */
+let match = null;
+let pending = null;
+
+/* ------------------------------------------------------------------ *
+ * Persistence
+ * ------------------------------------------------------------------ */
+
+function save() {
+  try {
+    if (match) localStorage.setItem(STORAGE_KEY, JSON.stringify(match));
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Private browsing or a full quota — the app still works for this session.
+  }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Guard against a half-written or stale-shaped entry.
+    if (!parsed?.config || !Array.isArray(parsed.innings) || parsed.innings.length === 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Commit a new match state, persist it, and repaint. */
+function commit(next) {
+  match = next;
+  pending = null;
+  save();
+  render();
+}
+
+/* ------------------------------------------------------------------ *
+ * Small builders
+ * ------------------------------------------------------------------ */
+
+function chipRow(container, values, isSelected, onPick, format = String) {
+  container.replaceChildren(...values.map((value) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'chip';
+    button.textContent = format(value);
+    button.setAttribute('aria-pressed', String(isSelected(value)));
+    button.addEventListener('click', () => onPick(value));
+    return button;
+  }));
+}
+
+function ballChip(delivery) {
+  const span = document.createElement('span');
+  span.className = 'ball';
+  span.textContent = deliveryLabel(delivery);
+  if (delivery.wicket) span.classList.add('is-wicket');
+  else if (delivery.type !== 'legal' || delivery.extraKind) span.classList.add('is-extra');
+  else if (delivery.batRuns >= 4) span.classList.add('is-boundary');
+  return span;
+}
+
+const overRuns = (deliveries) => deliveries.reduce((total, d) => total + deliveryRuns(d), 0);
+
+/* ------------------------------------------------------------------ *
+ * Setup screen
+ * ------------------------------------------------------------------ */
+
+const setup = {
+  teamA: 'Team A',
+  teamB: 'Team B',
+  overs: 20,
+  players: 11,
+  first: 'A',
+  // Either side can call. Defaults to B — the away side calls by convention,
+  // and the away side is the one listed second.
+  caller: 'B',
+  toss: null,
+};
+const otherSide = (side) => (side === 'A' ? 'B' : 'A');
+const sideName = (side) =>
+  ((side === 'A' ? setup.teamA : setup.teamB) || '').trim() || `Team ${side}`;
+
+/**
+ * Flip the coin. The call decides the winner: match it and the calling side
+ * wins the toss, miss it and the other side does. The delay is only so the
+ * animation has something to show.
+ */
+function flipCoin(call) {
+  // Pin the caller now: the coin is in the air for 900ms and nothing should be
+  // able to change who called during it.
+  const caller = setup.caller;
+  setup.toss = { caller, call, flipping: true, coin: null, winner: null, decision: null };
+  renderSetup();
+  window.setTimeout(() => {
+    const coin = Math.random() < 0.5 ? 'heads' : 'tails';
+    setup.toss = {
+      caller,
+      call,
+      flipping: false,
+      coin,
+      winner: coin === call ? caller : otherSide(caller),
+      decision: null,
+    };
+    renderSetup();
+  }, 900);
+}
+
+/** The toss winner elects to bat or bowl, which sets who bats first. */
+function decideToss(decision) {
+  setup.toss.decision = decision;
+  setup.first = decision === 'bat' ? setup.toss.winner : otherSide(setup.toss.winner);
+  renderSetup();
+}
+
+/** The two faces of the coin. */
+const COIN_FACES = {
+  heads: '<span class="coin-letter">H</span>',
+  tails: '<span class="coin-letter">T</span>',
+};
+
+function renderToss() {
+  const box = $('toss');
+  const toss = setup.toss;
+
+  const coin = document.createElement('div');
+  coin.className = 'coin';
+  coin.setAttribute('aria-hidden', 'true');
+
+  const text = document.createElement('div');
+  text.className = 'toss-text';
+
+  const actions = document.createElement('div');
+  actions.className = 'toss-actions';
+
+  const action = (label, onClick) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'chip';
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    return button;
+  };
+
+  // Every branch below fills `text` and `actions`; `extra` is an optional row
+  // that sits between them.
+  let extra = null;
+
+  if (!toss) {
+    coin.innerHTML = '<span class="coin-blank">?</span>';
+    text.textContent = 'Toss called by';
+
+    extra = document.createElement('div');
+    extra.className = 'toss-actions';
+    extra.append(...['A', 'B'].map((side) => {
+      const button = action(sideName(side), () => { setup.caller = side; renderSetup(); });
+      button.setAttribute('aria-pressed', String(setup.caller === side));
+      return button;
+    }));
+
+    actions.append(
+      action('Heads', () => flipCoin('heads')),
+      action('Tails', () => flipCoin('tails')),
+      action('Skip toss', () => { setup.toss = { skipped: true }; renderSetup(); }),
+    );
+  } else if (toss.skipped) {
+    coin.innerHTML = '<span class="coin-blank">?</span>';
+    text.textContent = 'No toss — pick who bats first below.';
+    actions.append(action('Toss anyway', () => { setup.toss = null; renderSetup(); }));
+  } else if (toss.flipping) {
+    coin.classList.add('is-flipping');
+    // Mid-air: show the called face, so the spin has something to read.
+    coin.innerHTML = COIN_FACES[toss.call];
+    text.textContent = `Flipping… ${sideName(toss.caller)} called ${toss.call}.`;
+  } else {
+    coin.innerHTML = COIN_FACES[toss.coin];
+    const winner = sideName(toss.winner);
+    if (!toss.decision) {
+      text.innerHTML = '';
+      text.append(
+        `It's ${toss.coin}. `,
+        Object.assign(document.createElement('strong'), { textContent: winner }),
+        ' won the toss.',
+      );
+      actions.append(
+        action('Bat first', () => decideToss('bat')),
+        action('Bowl first', () => decideToss('bowl')),
+        action('Re-toss', () => { setup.toss = null; renderSetup(); }),
+      );
+    } else {
+      text.innerHTML = '';
+      text.append(
+        Object.assign(document.createElement('strong'), { textContent: winner }),
+        ` won the toss and chose to ${toss.decision}.`,
+      );
+      actions.append(action('Re-toss', () => { setup.toss = null; renderSetup(); }));
+    }
+  }
+
+  const column = document.createElement('div');
+  column.className = 'toss-col';
+  column.append(text, ...(extra ? [extra] : []), actions);
+  box.replaceChildren(coin, column);
+}
+
+function renderSetup() {
+  const wickets = wicketsAllowed({ playersPerSide: setup.players });
+  $('hint-wickets').textContent =
+    `All out at ${wickets} wicket${wickets === 1 ? '' : 's'}. Adjustable mid-match.`;
+
+  renderToss();
+
+  chipRow(
+    $('chips-first'),
+    ['A', 'B'],
+    (v) => v === setup.first,
+    (v) => {
+      setup.first = v;
+      // Picking by hand overrides the toss, so stop claiming the toss decided it.
+      if (setup.toss?.decision) setup.toss.decision = null;
+      renderSetup();
+    },
+    sideName,
+  );
+
+  const toss = setup.toss;
+  $('hint-first').textContent = toss?.decision
+    ? `Set by the toss — ${sideName(toss.winner)} chose to ${toss.decision}.`
+    : 'Pick by hand, or use the toss above.';
+}
+
+$('in-team-a').addEventListener('input', (e) => { setup.teamA = e.target.value; renderSetup(); });
+$('in-team-b').addEventListener('input', (e) => { setup.teamB = e.target.value; renderSetup(); });
+$('in-overs').addEventListener('input', (e) => { setup.overs = Number(e.target.value); renderSetup(); });
+$('in-players').addEventListener('input', (e) => { setup.players = Number(e.target.value); renderSetup(); });
+
+$('btn-start').addEventListener('click', () => {
+  const overs = clampInt(setup.overs, 1, 99, 20);
+  const players = clampInt(setup.players, 2, 15, 11);
+  commit(createMatch({
+    teamA: setup.teamA.trim() || 'Team A',
+    teamB: setup.teamB.trim() || 'Team B',
+    oversPerInnings: overs,
+    playersPerSide: players,
+    battingFirst: setup.first,
+    toss: setup.toss?.decision
+      ? { coin: setup.toss.coin, winner: setup.toss.winner, decision: setup.toss.decision }
+      : null,
+  }));
+});
+
+function clampInt(value, min, max, fallback) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+/* ------------------------------------------------------------------ *
+ * Scoring pad
+ * ------------------------------------------------------------------ */
+
+/**
+ * Sheet definitions. Runs 0-6 on the pad commit on a single tap; everything
+ * here needs a second tap to say *how many* runs came with it, which is the
+ * whole point — a wide to the boundary is five runs, not one.
+ *
+ * Every button in a sheet commits, and each row is labelled with what it
+ * records. A run out is its own row rather than a toggle you have to arm
+ * first: with a toggle, tapping the runs commits the ball before you reach it,
+ * so the wicket is silently lost.
+ */
+const SHEETS = {
+  wide: {
+    title: 'Wide',
+    hint: 'Always 1, plus any runs run — or 4 if it beat the keeper to the rope. Not a ball.',
+    toggles: [],
+    rows: [
+      {
+        label: 'Runs',
+        runs: [0, 1, 2, 3, 4],
+        runLabel: (n) => `+${n}`,
+        build: (n) => ({ type: 'wide', extraRuns: n }),
+      },
+      {
+        label: 'Run out',
+        wicket: true,
+        runs: [0, 1, 2, 3],
+        runLabel: (n) => `W+${n}`,
+        build: (n) => ({ type: 'wide', extraRuns: n, wicket: true }),
+      },
+    ],
+  },
+  noball: {
+    title: 'No-ball',
+    hint: 'Always 1, plus runs off the bat — or byes, via the toggle. Not a ball.',
+    toggles: ['byes'],
+    rows: [
+      {
+        label: 'Runs',
+        runs: [0, 1, 2, 3, 4, 6],
+        runLabel: (n) => `+${n}`,
+        build: (n, state) => (state.byes
+          ? { type: 'noball', extraRuns: n, extraKind: 'bye' }
+          : { type: 'noball', batRuns: n }),
+      },
+      {
+        label: 'Run out',
+        wicket: true,
+        runs: [0, 1, 2, 3],
+        runLabel: (n) => `W+${n}`,
+        build: (n, state) => (state.byes
+          ? { type: 'noball', extraRuns: n, extraKind: 'bye', wicket: true }
+          : { type: 'noball', batRuns: n, wicket: true }),
+      },
+    ],
+  },
+  bye: {
+    title: 'Byes',
+    hint: 'Runs to the team, not the batter. Counts as a ball.',
+    toggles: [],
+    rows: [
+      {
+        label: 'Runs',
+        runs: [1, 2, 3, 4],
+        runLabel: String,
+        build: (n) => ({ type: 'legal', extraRuns: n, extraKind: 'bye' }),
+      },
+      {
+        label: 'Run out',
+        wicket: true,
+        runs: [0, 1, 2, 3],
+        runLabel: (n) => `W+${n}`,
+        build: (n) => ({ type: 'legal', extraRuns: n, extraKind: 'bye', wicket: true }),
+      },
+    ],
+  },
+  legbye: {
+    title: 'Leg byes',
+    hint: 'Off the pad, not the bat. Counts as a ball.',
+    toggles: [],
+    rows: [
+      {
+        label: 'Runs',
+        runs: [1, 2, 3, 4],
+        runLabel: String,
+        build: (n) => ({ type: 'legal', extraRuns: n, extraKind: 'legbye' }),
+      },
+      {
+        label: 'Run out',
+        wicket: true,
+        runs: [0, 1, 2, 3],
+        runLabel: (n) => `W+${n}`,
+        build: (n) => ({ type: 'legal', extraRuns: n, extraKind: 'legbye', wicket: true }),
+      },
+    ],
+  },
+  wicket: {
+    title: 'Wicket',
+    hint: 'Runs completed before the dismissal, if any. Tap 0 for the usual case.',
+    toggles: [],
+    rows: [
+      {
+        label: 'Runs completed',
+        wicket: true,
+        runs: [0, 1, 2, 3],
+        runLabel: String,
+        build: (n) => ({ type: 'legal', batRuns: n, wicket: true }),
+      },
+    ],
+  },
+};
+
+const TOGGLE_LABELS = {
+  byes: 'Runs were byes',
+};
+
+$('pad').addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button) return;
+
+  if (button.dataset.runs !== undefined) {
+    commit(applyDelivery(match, { type: 'legal', batRuns: Number(button.dataset.runs) }));
+    return;
+  }
+  if (button.dataset.sheet) {
+    const kind = button.dataset.sheet;
+    // Tapping the same pad button again closes the sheet.
+    pending = pending?.kind === kind ? null : { kind, wicket: false, byes: false, justOpened: true };
+    render();
+  }
+});
+
+$('btn-sheet-cancel').addEventListener('click', () => { pending = null; render(); });
+
+function renderSheet() {
+  const sheet = $('sheet');
+  if (!pending) {
+    sheet.hidden = true;
+    return;
+  }
+
+  const spec = SHEETS[pending.kind];
+  sheet.hidden = false;
+
+  $('sheet-title').replaceChildren(
+    spec.title,
+    Object.assign(document.createElement('small'), { textContent: spec.hint }),
+  );
+
+  // Modifiers sit above the rows: they change what a run tap *means*, so they
+  // have to be read first.
+  $('sheet-toggles').replaceChildren(...spec.toggles.map((key) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'toggle';
+    button.textContent = TOGGLE_LABELS[key];
+    button.setAttribute('aria-pressed', String(pending[key]));
+    button.addEventListener('click', () => { pending[key] = !pending[key]; renderSheet(); });
+    return button;
+  }));
+  $('sheet-toggles').hidden = spec.toggles.length === 0;
+
+  $('sheet-rows').replaceChildren(...spec.rows.map((row) => {
+    const wrap = document.createElement('div');
+    wrap.className = row.wicket ? 'sheet-row is-wicket' : 'sheet-row';
+
+    const label = document.createElement('div');
+    label.className = 'sheet-row-label';
+    label.textContent = row.label;
+
+    const runs = document.createElement('div');
+    runs.className = 'sheet-runs';
+    runs.append(...row.runs.map((value) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = row.runLabel(value);
+      button.setAttribute('aria-label', `${spec.title}, ${row.label.toLowerCase()} ${value}`);
+      button.addEventListener('click', () => commit(applyDelivery(match, row.build(value, pending))));
+      return button;
+    }));
+
+    wrap.append(label, runs);
+    return wrap;
+  }));
+
+  // Send focus to the first run option when the sheet opens, so it is usable
+  // from a keyboard — but not on a toggle re-render, which would pull focus off
+  // the toggle that was just pressed.
+  if (pending.justOpened) {
+    pending.justOpened = false;
+    $('sheet-rows').querySelector('button')?.focus({ preventScroll: true });
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Scoring screen
+ * ------------------------------------------------------------------ */
+
+function renderScoring() {
+  const index = match.current;
+  const summary = summarizeInnings(match, index);
+  const { config } = match;
+
+  $('out-batting').textContent = battingTeamFor(config, index);
+  $('out-innings').textContent = `Innings ${index + 1} of 2`;
+  $('out-score').textContent = `${summary.runs}/${summary.wickets}`;
+  $('out-score').setAttribute(
+    'aria-label',
+    `${summary.runs} for ${summary.wickets} after ${summary.oversText} overs`,
+  );
+  $('out-overs').textContent =
+    `${summary.oversText} / ${config.oversPerInnings} overs · ${summary.maxWickets - summary.wickets} wickets left`;
+  $('out-rr').textContent = summary.runRate.toFixed(2);
+  $('out-extras').textContent = String(summary.extras);
+  $('out-balls').textContent = String(summary.ballsLeft);
+
+  renderChase();
+  renderBook(summary);
+  renderSheet();
+
+  // Nothing to undo only at the very start: no deliveries, first innings, not closed.
+  $('btn-undo').disabled = index === 0
+    && match.innings[0].deliveries.length === 0
+    && !match.innings[0].closed;
+}
+
+function renderChase() {
+  const chase = chaseState(match);
+  const panel = $('out-chase');
+  if (!chase) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  panel.innerHTML = '';
+  panel.append(
+    `Need ${chase.needed} from ${chase.ballsLeft} ball${chase.ballsLeft === 1 ? '' : 's'}`,
+    Object.assign(document.createElement('small'), {
+      textContent: `Target ${chase.target} · required rate ${chase.requiredRate.toFixed(2)}`,
+    }),
+  );
+}
+
+function renderBook(summary) {
+  const groups = summary.overGroups;
+  const lastGroup = groups[groups.length - 1] ?? [];
+
+  // groupOvers only closes a group on the sixth legal ball, so the trailing
+  // group is still in progress unless it holds a full over. Counting legal
+  // balls (rather than testing legalBalls % 6) keeps an over that opens with a
+  // wide in the live row instead of filing it away as complete.
+  const lastIsComplete = lastGroup.filter(isLegalDelivery).length === BALLS_PER_OVER;
+  const currentGroup = lastIsComplete ? [] : lastGroup;
+  const completed = lastIsComplete ? groups : groups.slice(0, -1);
+
+  $('out-over-no').textContent = `Over ${completed.length + 1}`;
+  $('out-over-total').textContent = currentGroup.length > 0 ? `${overRuns(currentGroup)} r` : '';
+
+  if (currentGroup.length > 0) {
+    $('out-this-over').replaceChildren(...currentGroup.map(ballChip));
+  } else {
+    const empty = document.createElement('span');
+    empty.className = 'over-empty';
+    empty.textContent = 'New over';
+    $('out-this-over').replaceChildren(empty);
+  }
+
+  // Most recent completed over first — that's what a scorer glances back at.
+  $('out-history').replaceChildren(...completed.slice().reverse().map((deliveries, offset) => {
+    const row = document.createElement('div');
+    row.className = 'over-row';
+
+    const label = document.createElement('span');
+    label.className = 'over-no';
+    label.textContent = `Over ${completed.length - offset}`;
+
+    const balls = document.createElement('span');
+    balls.className = 'balls';
+    balls.append(...deliveries.map(ballChip));
+
+    const total = document.createElement('span');
+    total.className = 'over-total';
+    total.textContent = `${overRuns(deliveries)} r`;
+
+    row.append(label, balls, total);
+    return row;
+  }));
+}
+
+$('btn-undo').addEventListener('click', () => commit(undo(match)));
+
+$('btn-end-innings').addEventListener('click', () => {
+  const which = match.current === 0 ? 'first innings' : 'match';
+  if (confirm(`End the ${which} now?`)) commit(closeInnings(match));
+});
+
+/* ------------------------------------------------------------------ *
+ * Result screen
+ * ------------------------------------------------------------------ */
+
+function renderResult() {
+  $('out-result').textContent = result(match) ?? '';
+
+  const { toss } = match.config;
+  $('out-toss').hidden = !toss;
+  if (toss) {
+    const winner = toss.winner === 'A' ? match.config.teamA : match.config.teamB;
+    $('out-toss').textContent = `${winner} won the toss and chose to ${toss.decision}.`;
+  }
+
+  $('out-innings-summaries').replaceChildren(...match.innings.map((_, index) => {
+    const summary = summarizeInnings(match, index);
+    const row = document.createElement('div');
+    row.className = 'innings-summary';
+
+    const team = document.createElement('span');
+    team.className = 't';
+    team.textContent = battingTeamFor(match.config, index);
+
+    const score = document.createElement('span');
+    score.className = 's';
+    score.textContent = `${summary.runs}/${summary.wickets} (${summary.oversText} ov)`;
+
+    row.append(team, score);
+    return row;
+  }));
+}
+
+$('btn-new-match').addEventListener('click', () => {
+  if (confirm('Start a new match? This clears the current scorecard.')) commit(null);
+});
+
+/* ------------------------------------------------------------------ *
+ * Settings dialog — overs and players per side, editable mid-match
+ * ------------------------------------------------------------------ */
+
+const dialog = $('dlg-settings');
+let draft = null;
+
+function openSettings() {
+  draft = { ...match.config };
+  $('cfg-team-a').value = draft.teamA;
+  $('cfg-team-b').value = draft.teamB;
+  $('cfg-overs').value = String(draft.oversPerInnings);
+  $('cfg-players').value = String(draft.playersPerSide);
+  renderSettings();
+  dialog.showModal();
+}
+
+function renderSettings() {
+  const summary = summarizeInnings(match, match.current);
+  const oversBowled = summary.legalBalls / BALLS_PER_OVER;
+  const wickets = wicketsAllowed(draft);
+
+  $('cfg-hint-overs').textContent =
+    `${summary.oversText} bowled in this innings so far.`;
+  $('cfg-hint-players').textContent =
+    `All out at ${wickets} wicket${wickets === 1 ? '' : 's'}. ${summary.wickets} down.`;
+
+  // Warn before a change that would end the innings the moment it is applied.
+  const warnings = [];
+  if (Number(draft.oversPerInnings) <= oversBowled && summary.legalBalls > 0) {
+    warnings.push(`Cutting to ${draft.oversPerInnings} overs ends this innings immediately — ${summary.oversText} have already been bowled.`);
+  }
+  if (wickets <= summary.wickets && summary.wickets > 0) {
+    warnings.push(`${draft.playersPerSide} a side means all out at ${wickets} — this innings is already ${summary.wickets} down and would end immediately.`);
+  }
+
+  const warn = $('settings-warn');
+  warn.hidden = warnings.length === 0;
+  warn.textContent = warnings.join(' ');
+}
+
+$('cfg-team-a').addEventListener('input', (e) => { draft.teamA = e.target.value; renderSettings(); });
+$('cfg-team-b').addEventListener('input', (e) => { draft.teamB = e.target.value; renderSettings(); });
+$('cfg-overs').addEventListener('input', (e) => { draft.oversPerInnings = Number(e.target.value); renderSettings(); });
+$('cfg-players').addEventListener('input', (e) => { draft.playersPerSide = Number(e.target.value); renderSettings(); });
+
+$('btn-settings').addEventListener('click', openSettings);
+$('btn-overs-edit').addEventListener('click', openSettings);
+$('btn-cfg-cancel').addEventListener('click', () => dialog.close());
+
+$('btn-cfg-apply').addEventListener('click', () => {
+  commit(updateConfig(match, {
+    teamA: draft.teamA.trim() || 'Team A',
+    teamB: draft.teamB.trim() || 'Team B',
+    oversPerInnings: clampInt(draft.oversPerInnings, 1, 99, match.config.oversPerInnings),
+    playersPerSide: clampInt(draft.playersPerSide, 2, 15, match.config.playersPerSide),
+  }));
+  dialog.close();
+});
+
+$('btn-abandon').addEventListener('click', () => {
+  if (confirm('Abandon this match and start over? The scorecard is lost.')) {
+    dialog.close();
+    commit(null);
+  }
+});
+
+/* ------------------------------------------------------------------ *
+ * Top-level render
+ * ------------------------------------------------------------------ */
+
+function render() {
+  const screen = !match ? 'setup' : isMatchOver(match) ? 'result' : 'scoring';
+
+  $('screen-setup').hidden = screen !== 'setup';
+  $('screen-scoring').hidden = screen !== 'scoring';
+  $('screen-result').hidden = screen !== 'result';
+  $('btn-settings').hidden = screen !== 'scoring';
+
+  if (screen === 'setup') renderSetup();
+  if (screen === 'scoring') renderScoring();
+  if (screen === 'result') renderResult();
+}
+
+match = load();
+render();
+
+/* ------------------------------------------------------------------ *
+ * Offline support
+ * ------------------------------------------------------------------ */
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      // Offline support is a bonus; scoring works regardless.
+    });
+  });
+}
+</script>
+</body>
+</html>

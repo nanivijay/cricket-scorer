@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cricket ball">
+  <rect width="512" height="512" fill="#0f766e"/>
+  <circle cx="256" cy="256" r="155" fill="#d64545"/>
+  <circle cx="256" cy="256" r="155" fill="none" stroke="#00000022" stroke-width="10"/>
+  <g fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-dasharray="16 14">
+    <path d="M190 132 A 130 175 0 0 0 190 380"/>
+    <path d="M322 132 A 130 175 0 0 1 322 380"/>
+  </g>
+</svg>
