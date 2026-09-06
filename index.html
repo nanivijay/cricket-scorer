@@ -557,7 +557,7 @@
   <div class="topbar">
     <h1><span class="sub">Cricket</span>Over Counter</h1>
     <div class="topbar-actions">
-      <button id="btn-share" hidden>Share</button>
+      <button id="btn-share" hidden>Change scorer</button>
       <button class="icon-btn" id="btn-settings" hidden aria-label="Match settings" title="Match settings">&#9881;</button>
     </div>
   </div>
@@ -718,7 +718,7 @@
 </dialog>
 
 <dialog id="dlg-share" aria-labelledby="share-heading">
-  <h2 id="share-heading">Share this match</h2>
+  <h2 id="share-heading">Change scorer</h2>
   <p class="hint" id="share-summary" style="margin-top:-8px"></p>
 
   <label class="field">
@@ -1446,6 +1446,12 @@ function matchSummary(m) {
     .join(' v ');
 }
 
+/**
+ * The link means two different things depending on where the match is, so the
+ * dialog says which. Mid-match it is a handover: someone else takes over
+ * scoring from this ball on. Once the match is over there is nothing to hand
+ * over, so it is simply the finished scorecard.
+ */
 function openShare() {
   let url;
   try {
@@ -1457,15 +1463,17 @@ ${error.message}`);
     return;
   }
 
+  const finished = result(match) !== null;
+
   $('share-link').value = url;
   $('share-summary').textContent = matchSummary(match);
   $('btn-share-copy').textContent = 'Copy link';
+  $('share-heading').textContent = finished ? 'Share scorecard' : 'Change scorer';
 
-  const outcome = result(match);
-  $('share-caveat').textContent = outcome
+  $('share-caveat').textContent = finished
     ? 'The whole scorecard travels inside the link itself, so nothing is uploaded anywhere.'
-    : 'The link is a snapshot of the match right now. Whoever opens it carries on from '
-      + 'this point on their own copy — later balls you score will not appear for them.';
+    : 'Send this to whoever is taking over. They pick up from exactly this ball. '
+      + 'Once they have it, stop scoring on this device — the two copies do not sync.';
 
   $('btn-share-send').hidden = typeof navigator.share !== 'function';
   shareDialog.showModal();
@@ -1492,7 +1500,7 @@ $('btn-share-copy').addEventListener('click', async () => {
 $('btn-share-send').addEventListener('click', async () => {
   try {
     await navigator.share({
-      title: 'Cricket Over Counter',
+      title: result(match) === null ? 'Take over scoring' : 'Cricket scorecard',
       text: matchSummary(match),
       url: $('share-link').value,
     });
@@ -1557,7 +1565,7 @@ function renderImportBanner() {
 
   if (importError) {
     text.replaceChildren(
-      Object.assign(document.createElement('strong'), { textContent: 'That shared match could not be opened' }),
+      Object.assign(document.createElement('strong'), { textContent: 'That link could not be opened' }),
       Object.assign(document.createElement('span'), { textContent: importError }),
     );
     actions.replaceChildren(button('Dismiss', false, () => { importError = null; render(); }));
@@ -1565,16 +1573,21 @@ function renderImportBanner() {
   }
 
   const { incoming, existing } = pendingImport;
+  const finished = result(incoming) !== null;
   text.replaceChildren(
-    Object.assign(document.createElement('strong'), { textContent: 'A shared match is ready to open' }),
+    Object.assign(document.createElement('strong'), {
+      textContent: finished
+        ? 'A finished scorecard was shared with you'
+        : "You're being handed the scoring",
+    }),
     Object.assign(document.createElement('span'), { textContent: matchSummary(incoming) }),
     Object.assign(document.createElement('span'), {
       className: 'import-warn',
-      textContent: `Opening it replaces the match on this device: ${matchSummary(existing)}`,
+      textContent: `Taking it on replaces the match on this device: ${matchSummary(existing)}`,
     }),
   );
   actions.replaceChildren(
-    button('Open it', true, () => {
+    button(finished ? 'Open it' : 'Take over', true, () => {
       const adopt = pendingImport.incoming;
       pendingImport = null;
       commit(adopt);

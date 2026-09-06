@@ -30,10 +30,11 @@ blocking flaws:
   toss is recorded on the result screen.
 - **Two innings with a chase.** Target, "need N from M balls", required run rate, and a
   proper result — by runs, by wickets with balls to spare, or tied.
-- **Shareable links.** Tap **Share** and the whole match is packed into the link itself —
-  a full 20-over match is about 800 characters. Send it by message; whoever opens it picks
-  up exactly where you were and carries on from there on their own copy. The payload rides
-  in the URL fragment, which browsers never transmit, so nothing is uploaded anywhere.
+- **Change scorer.** Tap **Change scorer** mid-match and the whole match is packed into a
+  link — a full 20-over match is about 800 characters. Send it to whoever is taking over;
+  they pick up from exactly that ball. Once the match is finished the same button becomes
+  **Share scorecard**. The payload rides in the URL fragment, which browsers never
+  transmit, so nothing is uploaded anywhere.
 - **Over-by-over scorebook** with the live over highlighted and per-over run totals.
 - **Undo anything**, including back across an over boundary, an innings boundary, or an
   innings you ended by hand.
@@ -125,12 +126,13 @@ current config. Three things fall out of that for free:
 `engine.js` holds that fold and knows nothing about the DOM, which is why it can be
 tested in Node.
 
-## Sharing, and what it is not
+## Handing over, and what it is not
 
-A share link is a **snapshot**. Whoever opens it continues on their own copy, and the two
-diverge from that moment — balls you score afterwards do not appear for them. That is the
-deliberate trade: it needs no server, no accounts and no running costs, and it works with
-no signal.
+A handover link is a **snapshot**, not a live session. Whoever takes it on continues on
+their own copy, and the two diverge from that moment — balls you score afterwards do not
+appear for them, and theirs do not appear for you. So hand over and stop, rather than both
+scoring at once. That is the deliberate trade: it needs no server, no accounts and no
+running costs, and it works with no signal.
 
 Live shared sessions — one scorer, many watchers, updating ball by ball — would need a
 backend. The append-only delivery log is already the right shape for it.
