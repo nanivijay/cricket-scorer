@@ -111,6 +111,32 @@
 
   .icon-btn { min-width: 44px; padding: 10px; }
 
+  .import-banner {
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 12px 14px;
+    display: grid;
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .import-banner.is-error { border-color: var(--extra); }
+  .import-banner strong { display: block; margin-bottom: 2px; }
+  .import-banner span { color: var(--muted); }
+  .import-warn { display: block; margin-top: 6px; color: var(--extra); }
+  .import-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .import-actions button { flex: 1 1 auto; }
+
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+  .topbar-actions button { min-height: 40px; padding: 8px 14px; font-size: 0.88rem; }
+
+  /* The link is long; let it scroll rather than stretch the dialog. */
+  #share-link {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+  }
+
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -523,9 +549,17 @@
 <body>
 <div class="app">
 
+  <div class="import-banner" id="import-banner" hidden role="status">
+    <div id="import-text"></div>
+    <div class="import-actions" id="import-actions"></div>
+  </div>
+
   <div class="topbar">
     <h1><span class="sub">Cricket</span>Over Counter</h1>
-    <button class="icon-btn" id="btn-settings" hidden aria-label="Match settings" title="Match settings">&#9881;</button>
+    <div class="topbar-actions">
+      <button id="btn-share" hidden>Share</button>
+      <button class="icon-btn" id="btn-settings" hidden aria-label="Match settings" title="Match settings">&#9881;</button>
+    </div>
   </div>
 
   <!-- ============================ SETUP ============================ -->
@@ -636,7 +670,10 @@
     <div class="result-line" id="out-result" aria-live="polite"></div>
     <p class="toss-note" id="out-toss" hidden></p>
     <div id="out-innings-summaries"></div>
-    <button class="primary" id="btn-new-match" style="width:100%;margin-top:16px">New match</button>
+    <div class="actions" style="margin-top:16px">
+      <button id="btn-share-result">Share scorecard</button>
+      <button class="primary" id="btn-new-match">New match</button>
+    </div>
   </section>
 
 </div>
@@ -680,7 +717,27 @@
   </div>
 </dialog>
 
+<dialog id="dlg-share" aria-labelledby="share-heading">
+  <h2 id="share-heading">Share this match</h2>
+  <p class="hint" id="share-summary" style="margin-top:-8px"></p>
+
+  <label class="field">
+    <span class="label">Link</span>
+    <input type="text" id="share-link" readonly spellcheck="false">
+  </label>
+
+  <div class="actions">
+    <button class="primary" id="btn-share-copy">Copy link</button>
+    <button id="btn-share-send" hidden>Share&hellip;</button>
+  </div>
+
+  <p class="hint" id="share-caveat"></p>
+
+  <button id="btn-share-close" style="width:100%;margin-top:14px">Close</button>
+</dialog>
+
 <script type="module">
+import { decodeMatch, payloadFromHash, shareUrl } from './share.js';
 import {
   BALLS_PER_OVER,
   applyDelivery,
@@ -1369,6 +1426,164 @@ $('btn-abandon').addEventListener('click', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Sharing
+ * ------------------------------------------------------------------ */
+
+const shareDialog = $('dlg-share');
+
+/** This page, without any fragment — the base every share link is built on. */
+const appUrl = () => location.origin + location.pathname;
+
+const ballsIn = (m) => m.innings.reduce((total, innings) => total + innings.deliveries.length, 0);
+
+/** "Riverside CC 64/3 (7.2 ov) v Old Foresters" — for the dialog and the share sheet. */
+function matchSummary(m) {
+  return m.innings
+    .map((_, index) => {
+      const s = summarizeInnings(m, index);
+      return `${battingTeamFor(m.config, index)} ${s.runs}/${s.wickets} (${s.oversText} ov)`;
+    })
+    .join(' v ');
+}
+
+function openShare() {
+  let url;
+  try {
+    url = shareUrl(match, appUrl());
+  } catch (error) {
+    alert(`This match could not be turned into a link.
+
+${error.message}`);
+    return;
+  }
+
+  $('share-link').value = url;
+  $('share-summary').textContent = matchSummary(match);
+  $('btn-share-copy').textContent = 'Copy link';
+
+  const outcome = result(match);
+  $('share-caveat').textContent = outcome
+    ? 'The whole scorecard travels inside the link itself, so nothing is uploaded anywhere.'
+    : 'The link is a snapshot of the match right now. Whoever opens it carries on from '
+      + 'this point on their own copy — later balls you score will not appear for them.';
+
+  $('btn-share-send').hidden = typeof navigator.share !== 'function';
+  shareDialog.showModal();
+  $('btn-share-copy').focus({ preventScroll: true });
+}
+
+$('btn-share').addEventListener('click', openShare);
+$('btn-share-result').addEventListener('click', openShare);
+$('btn-share-close').addEventListener('click', () => shareDialog.close());
+
+$('btn-share-copy').addEventListener('click', async () => {
+  const field = $('share-link');
+  try {
+    await navigator.clipboard.writeText(field.value);
+  } catch {
+    // Clipboard access can be refused; selecting the text lets the user copy it.
+    field.focus();
+    field.select();
+  }
+  $('btn-share-copy').textContent = 'Copied';
+  window.setTimeout(() => { $('btn-share-copy').textContent = 'Copy link'; }, 1600);
+});
+
+$('btn-share-send').addEventListener('click', async () => {
+  try {
+    await navigator.share({
+      title: 'Cricket Over Counter',
+      text: matchSummary(match),
+      url: $('share-link').value,
+    });
+  } catch {
+    // The user dismissed the share sheet; nothing to do.
+  }
+});
+
+/**
+ * A shared match found in the URL fragment but not yet adopted, because there
+ * is already a match in progress on this device. Offered via a banner rather
+ * than a confirm() — a blocking modal at page load that can wipe a live
+ * scorecard is the wrong way to ask.
+ */
+let pendingImport = null;
+
+/** Why a shared link could not be opened, shown in the same banner. */
+let importError = null;
+
+/**
+ * Read a match handed over in the URL fragment. The fragment is cleared either
+ * way, so a reload can't re-import and clobber whatever has been scored since.
+ * Returns a match to adopt straight away, or null.
+ */
+function readSharedMatch() {
+  const payload = payloadFromHash(location.hash);
+  if (!payload) return null;
+  history.replaceState(null, '', location.pathname + location.search);
+
+  let incoming;
+  try {
+    incoming = decodeMatch(payload);
+  } catch (error) {
+    importError = error.message;
+    return null;
+  }
+
+  // Nothing worth protecting on this device — just open it.
+  const existing = load();
+  if (!existing || ballsIn(existing) === 0) return incoming;
+
+  pendingImport = { incoming, existing };
+  return null;
+}
+
+function renderImportBanner() {
+  const banner = $('import-banner');
+  banner.hidden = pendingImport === null && importError === null;
+  banner.classList.toggle('is-error', importError !== null);
+  if (banner.hidden) return;
+
+  const text = $('import-text');
+  const actions = $('import-actions');
+  const button = (label, primary, onClick) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    if (primary) el.className = 'primary';
+    el.textContent = label;
+    el.addEventListener('click', onClick);
+    return el;
+  };
+
+  if (importError) {
+    text.replaceChildren(
+      Object.assign(document.createElement('strong'), { textContent: 'That shared match could not be opened' }),
+      Object.assign(document.createElement('span'), { textContent: importError }),
+    );
+    actions.replaceChildren(button('Dismiss', false, () => { importError = null; render(); }));
+    return;
+  }
+
+  const { incoming, existing } = pendingImport;
+  text.replaceChildren(
+    Object.assign(document.createElement('strong'), { textContent: 'A shared match is ready to open' }),
+    Object.assign(document.createElement('span'), { textContent: matchSummary(incoming) }),
+    Object.assign(document.createElement('span'), {
+      className: 'import-warn',
+      textContent: `Opening it replaces the match on this device: ${matchSummary(existing)}`,
+    }),
+  );
+  actions.replaceChildren(
+    button('Open it', true, () => {
+      const adopt = pendingImport.incoming;
+      pendingImport = null;
+      commit(adopt);
+    }),
+    button('Not now', false, () => { pendingImport = null; render(); }),
+  );
+}
+
+/* ------------------------------------------------------------------ *
  * Top-level render
  * ------------------------------------------------------------------ */
 
@@ -1379,13 +1594,17 @@ function render() {
   $('screen-scoring').hidden = screen !== 'scoring';
   $('screen-result').hidden = screen !== 'result';
   $('btn-settings').hidden = screen !== 'scoring';
+  $('btn-share').hidden = screen === 'setup';
+  renderImportBanner();
 
   if (screen === 'setup') renderSetup();
   if (screen === 'scoring') renderScoring();
   if (screen === 'result') renderResult();
 }
 
-match = load();
+const shared = readSharedMatch();
+match = shared ?? load();
+if (shared) save();
 render();
 
 /* ------------------------------------------------------------------ *

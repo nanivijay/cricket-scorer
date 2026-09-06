@@ -36,15 +36,17 @@
 </style>
 </head>
 <body>
-  <h1>Scoring engine tests</h1>
-  <p class="lede">Assertions for <code>engine.js</code> — the Laws of Cricket rules this app exists to get right.</p>
+  <h1>Engine and share-link tests</h1>
+  <p class="lede">Assertions for <code>engine.js</code> — the Laws of Cricket rules this app exists to get
+  right — and for <code>share.js</code>, where a bad encoding would hand someone a wrong scorecard.</p>
   <div id="tally" class="tally">Running…</div>
   <ol id="results"></ol>
 
 <script type="module">
 import { runTests } from './tests.js';
+import { runShareTests } from './share.tests.js';
 
-const results = runTests();
+const results = [...runTests(), ...runShareTests()];
 const passed = results.filter((r) => r.ok).length;
 
 const tally = document.getElementById('tally');
