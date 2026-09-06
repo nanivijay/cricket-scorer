@@ -1,27 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cricket ball">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cricket bat and ball">
   <defs>
     <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0f766e"/>
-      <stop offset="1" stop-color="#0a5852"/>
+      <stop offset="0" stop-color="#117c74"/>
+      <stop offset="1" stop-color="#084e49"/>
     </linearGradient>
-    <radialGradient id="leather" cx="0.36" cy="0.32" r="0.78">
-      <stop offset="0" stop-color="#e15c58"/>
-      <stop offset="1" stop-color="#c73a3a"/>
+    <linearGradient id="willow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4e7ca"/>
+      <stop offset="1" stop-color="#d6c29c"/>
+    </linearGradient>
+    <radialGradient id="leather" cx="0.34" cy="0.30" r="0.80">
+      <stop offset="0" stop-color="#f6766a"/>
+      <stop offset="1" stop-color="#e4483f"/>
     </radialGradient>
     <clipPath id="ball">
-      <circle cx="256" cy="256" r="205"/>
+      <circle cx="137" cy="144" r="78"/>
     </clipPath>
   </defs>
 
   <rect width="512" height="512" fill="url(#ground)"/>
-  <circle cx="256" cy="256" r="205" fill="url(#leather)"/>
 
-  <!-- A single bold seam: the one detail that still reads at favicon size. -->
+  <!-- The bat, laid along one diagonal. Blade and grip overlap deliberately:
+       a hairline gap reads as two unrelated shapes rather than one bat. -->
+  <rect x="179" y="164" width="97" height="233" rx="22"
+        fill="url(#willow)" transform="rotate(50 227 281)"/>
+  <rect x="336" y="104" width="41" height="136" rx="17"
+        fill="#2a2622" transform="rotate(50 357 172)"/>
+
+  <!-- The ball, in the corner the bat leaves open. -->
+  <circle cx="137" cy="144" r="78" fill="url(#leather)"/>
   <g clip-path="url(#ball)">
-    <path d="M300 88 A 96 194 0 0 1 300 424"
-          fill="none" stroke="#fff4e8" stroke-width="17"
-          stroke-linecap="butt" stroke-dasharray="26 22"/>
+    <path d="M159 90 A 34 70 0 0 1 159 199"
+          fill="none" stroke="#fff6ec" stroke-width="11"
+          stroke-linecap="butt" stroke-dasharray="15 15"/>
   </g>
-
-  <circle cx="256" cy="256" r="205" fill="none" stroke="#802121" stroke-width="14" opacity="0.55"/>
 </svg>

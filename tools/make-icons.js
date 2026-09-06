@@ -75,12 +75,14 @@ function encodePng(size, rgba) {
 
 /* ------------------------------- Drawing -------------------------------- */
 
-const TEAL = [15, 118, 110];
-const TEAL_DEEP = [10, 88, 82];
-const LEATHER = [199, 58, 58];
-const LEATHER_LIT = [225, 92, 88];
-const RIM = [128, 33, 33];
-const SEAM = [255, 244, 232];
+const TEAL = [17, 124, 116];
+const TEAL_DEEP = [8, 78, 73];
+const WILLOW = [244, 231, 202];
+const WILLOW_SHADE = [214, 194, 156];
+const GRIP = [42, 38, 34];
+const LEATHER = [228, 72, 63];
+const LEATHER_LIT = [246, 118, 106];
+const SEAM = [255, 246, 236];
 
 const mix = (a, b, t) => [
   a[0] + (b[0] - a[0]) * t,
@@ -88,44 +90,87 @@ const mix = (a, b, t) => [
   a[2] + (b[2] - a[2]) * t,
 ];
 
+// The bat lies along one diagonal. Everything is a fraction of the icon size,
+// so the geometry is identical at every resolution.
+const ANGLE = (50 * Math.PI) / 180;
+const COS = Math.cos(ANGLE);
+const SIN = Math.sin(ANGLE);
+
+// Up-and-right along the bat, from the toe of the blade to the top of the grip.
+const AXIS = [Math.sin(ANGLE), -Math.cos(ANGLE)];
+
+/** Signed distance to a rounded rectangle; negative inside. */
+function roundedRect(px, py, halfW, halfH, radius) {
+  const qx = Math.abs(px) - (halfW - radius);
+  const qy = Math.abs(py) - (halfH - radius);
+  const outside = Math.hypot(Math.max(qx, 0), Math.max(qy, 0));
+  return outside + Math.min(Math.max(qx, qy), 0) - radius;
+}
+
+/** Rotate a point into the bat's own frame, where its length runs along y. */
+function toBatFrame(dx, dy) {
+  return [dx * COS + dy * SIN, -dx * SIN + dy * COS];
+}
+
 /**
- * A cricket ball, lit from the top left, on a teal ground.
+ * A cricket bat on the diagonal with the ball in the corner it leaves open.
  *
- * At 32px in a browser tab there is room for exactly one idea, so the ball
- * fills most of the frame and the seam is a single bold curve rather than the
- * two fine dashed ones a larger rendering can afford.
+ * Two masses either side of one diagonal is about all a 16px tab icon can
+ * carry, so there is no outline and no shadow — a cream blade, a dark grip and
+ * a red ball, each big enough to survive the shrink. The blade and grip are
+ * deliberately given overlapping lengths: a hairline gap between them reads as
+ * two unrelated blobs rather than one bat.
  */
 function sample(x, y, size) {
   const cx = size * 0.5;
   const cy = size * 0.5;
-  const dx = x - cx;
-  const dy = y - cy;
 
-  // Background: a soft diagonal so the tile does not read as a flat block.
+  // Ground: a soft diagonal wash so the tile is not a flat block of teal.
   const wash = Math.min(1, Math.max(0, (x + y) / (size * 2)));
-  const ground = mix(TEAL, TEAL_DEEP, wash);
+  let colour = mix(TEAL, TEAL_DEEP, wash);
 
-  const radius = size * 0.40;
-  const distance = Math.hypot(dx, dy);
-  if (distance > radius) return ground;
+  // Lay the bat out from the toe of the blade upward along the axis.
+  const toeX = cx - size * 0.230;
+  const toeY = cy + size * 0.195;
+  const bladeLength = size * 0.455;
+  const gripLength = size * 0.265;
+  const overlap = size * 0.030;
 
-  // Leather, shaded from a highlight at the upper left to a darker lower right.
-  const light = Math.min(1, Math.max(0, 0.5 - (dx + dy) / (radius * 3.2)));
-  let colour = mix(LEATHER, LEATHER_LIT, light);
+  const along = (distance) => [toeX + AXIS[0] * distance, toeY + AXIS[1] * distance];
 
-  // A single seam: the right-hand flank of an ellipse, stopped short of the
-  // poles, stitched. One clear curve survives being shrunk to a favicon.
-  const a = radius * 0.46;
-  const b = radius * 0.94;
-  const ellipse = Math.hypot(dx / a, dy / b);
-  const onSeam = Math.abs(ellipse - 1) < 0.13 && dx > -radius * 0.1 && Math.abs(dy) < b * 0.82;
-  const stitch = Math.floor((dy / size) * 15);
-  if (onSeam && stitch % 2 === 0) return SEAM;
-
-  // Darken the edge so the ball keeps its shape against the teal.
-  if (distance > radius * 0.9) {
-    colour = mix(colour, RIM, (distance - radius * 0.9) / (radius * 0.1));
+  const [bladeCx, bladeCy] = along(bladeLength / 2);
+  const [blx, bly] = toBatFrame(x - bladeCx, y - bladeCy);
+  if (roundedRect(blx, bly, size * 0.094, bladeLength / 2, size * 0.042) < 0) {
+    // Shade across the face so it reads as a blade rather than a flat stripe.
+    const across = Math.min(1, Math.max(0, (blx / (size * 0.094)) * 0.5 + 0.5));
+    colour = mix(WILLOW, WILLOW_SHADE, across);
   }
+
+  const [gripCx, gripCy] = along(bladeLength + gripLength / 2 - overlap);
+  const [gx, gy] = toBatFrame(x - gripCx, y - gripCy);
+  if (roundedRect(gx, gy, size * 0.040, gripLength / 2, size * 0.034) < 0) {
+    colour = GRIP;
+  }
+
+  // Ball, in the corner the bat leaves open.
+  const ddx = x - size * 0.268;
+  const ddy = y - size * 0.282;
+  const radius = size * 0.152;
+  if (Math.hypot(ddx, ddy) < radius) {
+    const light = Math.min(1, Math.max(0, 0.5 - (ddx + ddy) / (radius * 3)));
+    colour = mix(LEATHER, LEATHER_LIT, light);
+    // One short seam arc, dropped below 64px where it would only smear.
+    if (size >= 64) {
+      const a = radius * 0.44;
+      const b = radius * 0.90;
+      const ellipse = Math.hypot(ddx / a, ddy / b);
+      const onSeam = Math.abs(ellipse - 1) < 0.15
+        && ddx > -radius * 0.15
+        && Math.abs(ddy) < b * 0.78;
+      if (onSeam && Math.floor((ddy / size) * 17) % 2 === 0) colour = SEAM;
+    }
+  }
+
   return colour;
 }
 
