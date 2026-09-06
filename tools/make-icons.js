@@ -75,14 +75,23 @@ function encodePng(size, rgba) {
 
 /* ------------------------------- Drawing -------------------------------- */
 
+/**
+ * The icon has to sit on a light tab strip, a dark one, and whatever colour a
+ * phone home screen happens to be. So the palette is deliberately all
+ * mid-tones: nothing near white (which disappears on light) and nothing near
+ * black (which disappears on dark), with a dark outline to hold the shapes
+ * together against a pale background.
+ */
 const TEAL = [17, 124, 116];
 const TEAL_DEEP = [8, 78, 73];
-const WILLOW = [244, 231, 202];
-const WILLOW_SHADE = [214, 194, 156];
-const GRIP = [42, 38, 34];
-const LEATHER = [228, 72, 63];
-const LEATHER_LIT = [246, 118, 106];
+const WILLOW = [226, 179, 104];
+const WILLOW_SHADE = [196, 146, 72];
+const GRIP = [122, 79, 42];
+const LEATHER = [226, 68, 60];
+const LEATHER_LIT = [244, 112, 100];
 const SEAM = [255, 246, 236];
+const OUTLINE = [74, 44, 20];
+const BALL_OUTLINE = [124, 30, 26];
 
 const mix = (a, b, t) => [
   a[0] + (b[0] - a[0]) * t,
@@ -98,6 +107,11 @@ const SIN = Math.sin(ANGLE);
 
 // Up-and-right along the bat, from the toe of the blade to the top of the grip.
 const AXIS = [Math.sin(ANGLE), -Math.cos(ANGLE)];
+
+// The drawing's own centre, and how far it is enlarged to fill the tile.
+const DESIGN_CX = 0.478;
+const DESIGN_CY = 0.440;
+const ZOOM = 1.26;
 
 /** Signed distance to a rounded rectangle; negative inside. */
 function roundedRect(px, py, halfW, halfH, radius) {
@@ -115,19 +129,31 @@ function toBatFrame(dx, dy) {
 /**
  * A cricket bat on the diagonal with the ball in the corner it leaves open.
  *
- * Two masses either side of one diagonal is about all a 16px tab icon can
- * carry, so there is no outline and no shadow — a cream blade, a dark grip and
- * a red ball, each big enough to survive the shrink. The blade and grip are
- * deliberately given overlapping lengths: a hairline gap between them reads as
- * two unrelated blobs rather than one bat.
+ * Returns null for a transparent pixel. `opaque` fills the tile with the teal
+ * ground instead, which is what a maskable home-screen icon needs — the
+ * operating system crops those to its own shape and a transparent one would
+ * come out looking broken.
+ *
+ * The blade and grip are given overlapping lengths on purpose: a hairline gap
+ * between them reads as two unrelated shapes rather than one bat.
  */
-function sample(x, y, size) {
+function sample(tileX, tileY, size, opaque) {
   const cx = size * 0.5;
   const cy = size * 0.5;
 
-  // Ground: a soft diagonal wash so the tile is not a flat block of teal.
-  const wash = Math.min(1, Math.max(0, (x + y) / (size * 2)));
-  let colour = mix(TEAL, TEAL_DEEP, wash);
+  let colour = null;
+  if (opaque) {
+    const wash = Math.min(1, Math.max(0, (tileX + tileY) / (size * 2)));
+    colour = mix(TEAL, TEAL_DEEP, wash);
+  }
+
+  // Without a background tile the padding is just wasted space, so the artwork
+  // is scaled up about its own centre of mass to fill the frame. This matters
+  // most at 16px, where every pixel spent on margin is one the bat does not get.
+  const x = size * DESIGN_CX + (tileX - cx) / ZOOM;
+  const y = size * DESIGN_CY + (tileY - cy) / ZOOM;
+
+  const stroke = size * 0.028;
 
   // Lay the bat out from the toe of the blade upward along the axis.
   const toeX = cx - size * 0.230;
@@ -135,28 +161,33 @@ function sample(x, y, size) {
   const bladeLength = size * 0.455;
   const gripLength = size * 0.265;
   const overlap = size * 0.030;
-
   const along = (distance) => [toeX + AXIS[0] * distance, toeY + AXIS[1] * distance];
 
   const [bladeCx, bladeCy] = along(bladeLength / 2);
   const [blx, bly] = toBatFrame(x - bladeCx, y - bladeCy);
-  if (roundedRect(blx, bly, size * 0.094, bladeLength / 2, size * 0.042) < 0) {
+  const blade = roundedRect(blx, bly, size * 0.094, bladeLength / 2, size * 0.042);
+
+  const [gripCx, gripCy] = along(bladeLength + gripLength / 2 - overlap);
+  const [gx, gy] = toBatFrame(x - gripCx, y - gripCy);
+  const grip = roundedRect(gx, gy, size * 0.040, gripLength / 2, size * 0.034);
+
+  // Outline the whole bat first, so the grip does not get a seam down its side
+  // where it overlaps the blade.
+  if (Math.min(blade, grip) < stroke) colour = OUTLINE;
+  if (blade < 0) {
     // Shade across the face so it reads as a blade rather than a flat stripe.
     const across = Math.min(1, Math.max(0, (blx / (size * 0.094)) * 0.5 + 0.5));
     colour = mix(WILLOW, WILLOW_SHADE, across);
   }
-
-  const [gripCx, gripCy] = along(bladeLength + gripLength / 2 - overlap);
-  const [gx, gy] = toBatFrame(x - gripCx, y - gripCy);
-  if (roundedRect(gx, gy, size * 0.040, gripLength / 2, size * 0.034) < 0) {
-    colour = GRIP;
-  }
+  if (grip < 0) colour = GRIP;
 
   // Ball, in the corner the bat leaves open.
   const ddx = x - size * 0.268;
   const ddy = y - size * 0.282;
   const radius = size * 0.152;
-  if (Math.hypot(ddx, ddy) < radius) {
+  const distance = Math.hypot(ddx, ddy);
+  if (distance < radius + stroke) colour = BALL_OUTLINE;
+  if (distance < radius) {
     const light = Math.min(1, Math.max(0, 0.5 - (ddx + ddy) / (radius * 3)));
     colour = mix(LEATHER, LEATHER_LIT, light);
     // One short seam arc, dropped below 64px where it would only smear.
@@ -174,8 +205,12 @@ function sample(x, y, size) {
   return colour;
 }
 
-/** Render at `size`, supersampled for smooth edges. */
-function render(size, samplesPerAxis = 3) {
+/**
+ * Render at `size`, supersampled for smooth edges. Colour is averaged weighted
+ * by coverage, so edge pixels do not pick up a dark fringe from the
+ * transparent samples around them.
+ */
+function render(size, opaque, samplesPerAxis = 4) {
   const rgba = Buffer.alloc(size * size * 4);
   const step = 1 / samplesPerAxis;
   const total = samplesPerAxis * samplesPerAxis;
@@ -185,26 +220,38 @@ function render(size, samplesPerAxis = 3) {
       let r = 0;
       let g = 0;
       let b = 0;
+      let covered = 0;
       for (let sy = 0; sy < samplesPerAxis; sy += 1) {
         for (let sx = 0; sx < samplesPerAxis; sx += 1) {
-          const [pr, pg, pb] = sample(x + (sx + 0.5) * step, y + (sy + 0.5) * step, size);
-          r += pr;
-          g += pg;
-          b += pb;
+          const hit = sample(x + (sx + 0.5) * step, y + (sy + 0.5) * step, size, opaque);
+          if (hit === null) continue;
+          r += hit[0];
+          g += hit[1];
+          b += hit[2];
+          covered += 1;
         }
       }
       const offset = (y * size + x) * 4;
-      rgba[offset] = Math.round(r / total);
-      rgba[offset + 1] = Math.round(g / total);
-      rgba[offset + 2] = Math.round(b / total);
-      rgba[offset + 3] = 255;
+      if (covered > 0) {
+        rgba[offset] = Math.round(r / covered);
+        rgba[offset + 1] = Math.round(g / covered);
+        rgba[offset + 2] = Math.round(b / covered);
+        rgba[offset + 3] = Math.round((covered / total) * 255);
+      }
     }
   }
   return rgba;
 }
 
-for (const size of [192, 512]) {
-  const file = join(OUT_DIR, `icon-${size}.png`);
-  writeFileSync(file, encodePng(size, render(size)));
-  console.log(`wrote icon-${size}.png`);
+const OUTPUTS = [
+  { file: 'icon-192.png', size: 192, opaque: false },
+  { file: 'icon-512.png', size: 512, opaque: false },
+  // Maskable icons are cropped to the platform's own shape, so they must be
+  // full-bleed rather than transparent.
+  { file: 'icon-maskable-512.png', size: 512, opaque: true },
+];
+
+for (const { file, size, opaque } of OUTPUTS) {
+  writeFileSync(join(OUT_DIR, file), encodePng(size, render(size, opaque)));
+  console.log(`wrote ${file}`);
 }

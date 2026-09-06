@@ -19,7 +19,7 @@
  * Bump CACHE when the asset list changes.
  */
 
-const CACHE = 'cricket-counter-v4';
+const CACHE = 'cricket-counter-v5';
 
 /**
  * How long to wait for the network before falling back to cache. Long enough
@@ -37,6 +37,7 @@ const PRECACHE = [
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
+  './icon-maskable-512.png',
 ];
 
 self.addEventListener('install', (event) => {
