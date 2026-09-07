@@ -227,28 +227,32 @@
 
   /* ---------------- Toss ---------------- */
 
-  .toss { display: flex; align-items: center; gap: 12px; }
+  .toss { display: flex; align-items: center; gap: 12px; perspective: 600px; }
   .toss-col { flex: 1; min-width: 0; display: grid; gap: 8px; }
   .toss-text { font-size: 0.9rem; }
   .toss-text strong { font-weight: 700; }
   .toss-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 
+  /* The coin is a bare 3D shell and each face carries the gold, so a tumble
+     genuinely alternates H and T instead of spinning one static letter. */
   .coin {
+    position: relative;
     width: 58px;
     height: 58px;
     flex: 0 0 58px;
+    transform-style: preserve-3d;
+  }
+
+  .coin-side {
+    position: absolute;
+    inset: 0;
     border-radius: 50%;
     display: grid;
     place-items: center;
-    font-weight: 750;
-    font-size: 1.25rem;
-    color: #402d05;
+    backface-visibility: hidden;
     background: radial-gradient(circle at 34% 30%, #f4d276, #d8a02a 62%, #a97612);
     border: 2px solid #8a6508;
     box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.13);
-  }
-
-  .coin-letter {
     font-size: 1.75rem;
     font-weight: 800;
     line-height: 1;
@@ -256,7 +260,10 @@
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
-  .coin-blank { font-size: 1.5rem; font-weight: 800; color: #43300a; opacity: 0.4; }
+  /* The reverse, hidden until the spin brings it round. */
+  .coin-side.is-back { transform: rotateY(180deg); }
+
+  .coin-side.is-blank { font-size: 1.5rem; opacity: 0.45; }
 
   .coin.is-flipping { animation: coin-flip 0.9s ease-out; }
 
@@ -958,6 +965,21 @@ const sideName = (side) =>
   ((side === 'A' ? setup.teamA : setup.teamB) || '').trim() || `Team ${side}`;
 
 /**
+ * A coin, from the platform's cryptographic random source rather than
+ * Math.random. The odds are identical — a byte's low bit splits 128 values
+ * either way, so there is no modulo bias — but the sequence is not predictable
+ * from previous flips, which is the right property for deciding a toss.
+ *
+ * getRandomValues is available in insecure contexts too, so this works over
+ * plain http on a local server as well as on the deployed site.
+ */
+function tossCoin() {
+  const byte = new Uint8Array(1);
+  crypto.getRandomValues(byte);
+  return (byte[0] & 1) === 0 ? 'heads' : 'tails';
+}
+
+/**
  * Flip the coin. The call decides the winner: match it and the calling side
  * wins the toss, miss it and the other side does. The delay is only so the
  * animation has something to show.
@@ -969,7 +991,7 @@ function flipCoin(call) {
   setup.toss = { caller, call, flipping: true, coin: null, winner: null, decision: null };
   renderSetup();
   window.setTimeout(() => {
-    const coin = Math.random() < 0.5 ? 'heads' : 'tails';
+    const coin = tossCoin();
     setup.toss = {
       caller,
       call,
@@ -989,11 +1011,15 @@ function decideToss(decision) {
   renderSetup();
 }
 
-/** The two faces of the coin. */
-const COIN_FACES = {
-  heads: '<span class="coin-letter">H</span>',
-  tails: '<span class="coin-letter">T</span>',
-};
+/** One face of the coin. */
+function coinSide(text, className = '') {
+  const span = document.createElement('span');
+  span.className = className ? `coin-side ${className}` : 'coin-side';
+  span.textContent = text;
+  return span;
+}
+
+const faceLetter = (side) => (side === 'heads' ? 'H' : 'T');
 
 function renderToss() {
   const box = $('toss');
@@ -1023,7 +1049,7 @@ function renderToss() {
   let extra = null;
 
   if (!toss) {
-    coin.innerHTML = '<span class="coin-blank">?</span>';
+    coin.replaceChildren(coinSide('?', 'is-blank'));
     text.textContent = 'Toss called by';
 
     extra = document.createElement('div');
@@ -1040,16 +1066,16 @@ function renderToss() {
       action('Skip toss', () => { setup.toss = { skipped: true }; renderSetup(); }),
     );
   } else if (toss.skipped) {
-    coin.innerHTML = '<span class="coin-blank">?</span>';
+    coin.replaceChildren(coinSide('?', 'is-blank'));
     text.textContent = 'No toss — pick who bats first below.';
     actions.append(action('Toss anyway', () => { setup.toss = null; renderSetup(); }));
   } else if (toss.flipping) {
     coin.classList.add('is-flipping');
-    // Mid-air: show the called face, so the spin has something to read.
-    coin.innerHTML = COIN_FACES[toss.call];
+    // Both faces, so the tumble shows heads and tails coming round in turn.
+    coin.replaceChildren(coinSide('H'), coinSide('T', 'is-back'));
     text.textContent = `Flipping… ${sideName(toss.caller)} called ${toss.call}.`;
   } else {
-    coin.innerHTML = COIN_FACES[toss.coin];
+    coin.replaceChildren(coinSide(faceLetter(toss.coin)));
     const winner = sideName(toss.winner);
     if (!toss.decision) {
       text.innerHTML = '';
