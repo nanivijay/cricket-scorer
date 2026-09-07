@@ -76,9 +76,13 @@ export function deliveryExtras(delivery) {
 export const DEFAULT_CONFIG = {
   teamA: 'Team A',
   teamB: 'Team B',
-  oversPerInnings: 20,
-  playersPerSide: 11,
+  oversPerInnings: 16,
+  playersPerSide: 8,
   battingFirst: 'A',
+  // "Single batting": the last batter carries on without a partner, so the side
+  // is not all out until every player is dismissed. Common in social and
+  // short-handed games.
+  lastBatterStands: false,
   // Optional record of the toss: { coin: 'heads'|'tails', winner: 'A'|'B',
   // decision: 'bat'|'bowl' }. Purely descriptive — battingFirst is what the
   // scoring actually uses, so a match can be started without tossing at all.
@@ -86,11 +90,14 @@ export const DEFAULT_CONFIG = {
 };
 
 /**
- * A side is all out one wicket short of its player count — the last batter has
- * no partner. Floored at 1 so a nonsense player count can't wedge the innings.
+ * A side is normally all out one wicket short of its player count, because the
+ * last batter has no partner. With single batting the last batter carries on
+ * alone, so every player can be dismissed. Floored at 1 so a nonsense player
+ * count cannot wedge the innings.
  */
 export function wicketsAllowed(config) {
-  return Math.max(1, (config.playersPerSide ?? 11) - 1);
+  const players = config.playersPerSide ?? 11;
+  return Math.max(1, config.lastBatterStands ? players : players - 1);
 }
 
 /** The side batting in the given innings index (0 or 1). */

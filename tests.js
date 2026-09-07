@@ -298,6 +298,41 @@ test('a short side is all out sooner', () => {
   eq(wicketsAllowed({ playersPerSide: 2 }), 1, 'wickets allowed');
 });
 
+test('single batting lets the last batter carry on alone', () => {
+  eq(wicketsAllowed({ playersPerSide: 11, lastBatterStands: true }), 11, 'wickets allowed');
+  eq(wicketsAllowed({ playersPerSide: 8, lastBatterStands: true }), 8, 'wickets allowed');
+});
+
+test('single batting keeps the innings alive one wicket longer', () => {
+  const out = { type: 'legal', wicket: true };
+  const normal = play(match({ playersPerSide: 3 }), out, out);
+  ok(first(normal).allOut, 'a normal side of three is out at two');
+
+  const alone = play(match({ playersPerSide: 3, lastBatterStands: true }), out, out);
+  ok(!first(alone).allOut, 'with single batting it is not out yet');
+  eq(alone.current, 0, 'still the first innings');
+  ok(first(play(alone, out)).allOut, 'and out on the third');
+});
+
+test('turning single batting on mid-innings brings a side back from all out', () => {
+  const out = { type: 'legal', wicket: true };
+  let m = play(match({ playersPerSide: 3 }), out, out);
+  eq(m.current, 1, 'all out, so the chase started');
+  // The chase has not begun, so reopening the first innings is safe.
+  m = updateConfig(m, { lastBatterStands: true });
+  eq(m.current, 0, 'back in the first innings');
+  ok(!first(m).allOut, 'no longer all out');
+});
+
+test('turning single batting off mid-innings can end it on the spot', () => {
+  const out = { type: 'legal', wicket: true };
+  let m = play(match({ playersPerSide: 3, lastBatterStands: true }), out, out);
+  eq(m.current, 0, 'still batting');
+  m = updateConfig(m, { lastBatterStands: false });
+  ok(first(m).allOut, 'all out once the last batter loses their partner');
+  eq(m.current, 1, 'moved to the second innings');
+});
+
 test('the innings ends when the last wicket falls', () => {
   const out = { type: 'legal', wicket: true };
   const m = play(match({ playersPerSide: 3 }), out, out);

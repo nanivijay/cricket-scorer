@@ -193,6 +193,29 @@ test('who bats first survives both ways round', () => {
   }
 });
 
+test('single batting survives the round trip', () => {
+  for (const lastBatterStands of [true, false]) {
+    const m = createMatch({ playersPerSide: 9, lastBatterStands });
+    eq(roundTrip(m).config.lastBatterStands, lastBatterStands, `flag ${lastBatterStands}`);
+  }
+});
+
+test('single batting changes how many wickets the decoded match allows', () => {
+  const alone = roundTrip(createMatch({ playersPerSide: 6, lastBatterStands: true }));
+  const normal = roundTrip(createMatch({ playersPerSide: 6, lastBatterStands: false }));
+  eq(summarizeInnings(alone, 0).maxWickets, 6, 'with single batting');
+  eq(summarizeInnings(normal, 0).maxWickets, 5, 'without');
+});
+
+test('single batting rides alongside every other config flag', () => {
+  const m = createMatch({
+    teamA: 'Alpha', teamB: 'Beta', oversPerInnings: 16, playersPerSide: 8,
+    battingFirst: 'B', lastBatterStands: true,
+    toss: { coin: 'tails', winner: 'A', decision: 'bowl' },
+  });
+  eq(roundTrip(m).config, m.config, 'config');
+});
+
 test('overs and squad size survive, including odd ones', () => {
   for (const [overs, players] of [[1, 2], [5, 8], [16, 11], [50, 15], [99, 3]]) {
     const decoded = roundTrip(createMatch({ oversPerInnings: overs, playersPerSide: players }));

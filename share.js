@@ -128,7 +128,10 @@ export function encodeMatch(match) {
     | (hasSecond && innings[1].closed ? 4 : 0)
     | (hasSecond ? 8 : 0)
     | (toss ? 16 : 0)
-    | (config.battingFirst === 'B' ? 32 : 0);
+    | (config.battingFirst === 'B' ? 32 : 0)
+    // Bit 6 was spare, so links made before single batting existed decode as
+    // false — which is exactly the behaviour they were made under.
+    | (config.lastBatterStands ? 64 : 0);
 
   const bytes = [
     SHARE_FORMAT,
@@ -208,6 +211,7 @@ export function decodeMatch(text) {
     oversPerInnings,
     playersPerSide,
     battingFirst: (flags & 32) !== 0 ? 'B' : 'A',
+    lastBatterStands: (flags & 64) !== 0,
     toss: hasToss
       ? {
         coin: (tossByte & 1) !== 0 ? 'tails' : 'heads',
